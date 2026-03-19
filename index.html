@@ -1469,20 +1469,43 @@ async function soloPDF() {
 }
 
 function buildPayload(rec){
-  // Payload simple — solo campos básicos que PA puede mapear fácilmente
+  // Mapa de códigos a nombres completos
+  const schemeNames = {s1:'Túnel Continuo (Esquema 1)', s2:'Esquema 3', s3:'Tomra (Esquema 4)', s4:'Sala Proceso'};
+
+  // Nombres completos de esquemas seleccionados
+  const schemesNombres = rec.schemes
+    ? rec.schemes.map(s => schemeNames[s] || s).join(' | ')
+    : '';
+
+  // NC con observación Y acción correctiva
+  const ncDetalle = rec.nc
+    ? rec.nc.map(n => {
+        let txt = n.item;
+        if (n.obs)    txt += ' | Obs: '    + n.obs;
+        if (n.accion) txt += ' | Accion: ' + n.accion;
+        return txt;
+      }).join(' // ')
+    : '';
+
+  // Acción correctiva consolidada (todas las NC)
+  const accionCorrectiva = rec.nc
+    ? rec.nc.filter(n => n.accion).map(n => n.item + ': ' + n.accion).join(' | ')
+    : '';
+
   return {
-    timestamp:  new Date().toISOString(),
-    supervisor: rec.supervisor || '',
-    fecha:      rec.fecha || '',
-    hora:       rec.hora || '',
-    turno:      rec.turno || '',
-    esquema:    rec.esquema || '',
-    sku:        rec.sku || '',
-    obs:        rec.obs || '',
-    nc_count:   rec.nc ? rec.nc.length : 0,
-    nc_detalle: rec.nc ? rec.nc.map(n => n.item + (n.obs ? ' — ' + n.obs : '')).join(' | ') : '',
-    schemes:    rec.schemes ? rec.schemes.join(',') : '',
-    analista:   rec.analista || ''
+    timestamp:          new Date().toISOString(),
+    supervisor:         rec.supervisor  || '',
+    fecha:              rec.fecha       || '',
+    hora:               rec.hora        || '',
+    turno:              rec.turno       || '',
+    esquema:            rec.esquema     || '',
+    sku:                rec.sku         || '',
+    obs:                rec.obs         || '',
+    nc_count:           rec.nc ? rec.nc.length : 0,
+    nc_detalle:         ncDetalle,
+    accion_correctiva:  accionCorrectiva,
+    schemes:            schemesNombres,
+    analista:           rec.analista    || ''
   };
 }
 
@@ -1725,9 +1748,13 @@ function saveConfig(){
   updCfgStatus(cfg); refreshStats();
   toast('Guardado — ' + contactos.length + ' contacto' + (contactos.length!==1?'s':'') + ' WA');
 }
+const DEFAULT_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzdB2B_uRzdpq4PAOwocLGhDX0TDqH9uUb-mxSXbH1cPJHk0obPa_rfK_9NSe8axi616w/exec';
+
 function loadConfig(){
   const cfg=getCfg();
-  document.getElementById('cfg_url').value=cfg.paUrl||'';
+  // Si no hay URL guardada, usar la URL por defecto
+  if(!cfg.paUrl) cfg.paUrl = DEFAULT_SHEETS_URL;
+  document.getElementById('cfg_url').value=cfg.paUrl||DEFAULT_SHEETS_URL;
   document.getElementById('cfg_mail').value=cfg.emailJefe||'';
   updCfgStatus(cfg);
   // Migrar contactos del formato antiguo
@@ -1764,7 +1791,13 @@ function eliminarContactoWA(btn){
   btn.closest('.wa-cfg-row').remove();
   if(!list.children.length) agregarContactoWA();
 }
-function getCfg(){try{return JSON.parse(localStorage.getItem('cf_cfg')||'{}')}catch{return{}}}
+function getCfg(){
+  try{
+    const cfg = JSON.parse(localStorage.getItem('cf_cfg')||'{}');
+    if(!cfg.paUrl) cfg.paUrl = DEFAULT_SHEETS_URL;
+    return cfg;
+  }catch{return{paUrl:DEFAULT_SHEETS_URL};}
+}
 function validarUrlSheets(url) {
   const el = document.getElementById('urlValidMsg');
   if (!el) return;
