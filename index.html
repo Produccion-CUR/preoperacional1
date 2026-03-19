@@ -1149,14 +1149,23 @@ function getRec() {
   const nc=[];
   queue.forEach(sid=>SECS[sid].items.forEach((item,idx)=>{
     const v=estado[`${sid}_${idx}`];
+    // No incluir foto en el payload — solo info textual
     if(v&&v.val==='NC')nc.push({sec:SECS[sid].label,item,obs:v.obs||'',accion:v.accion||'',photo:v.photo||''});
   }));
-  const supEl    = document.getElementById('f_sup');
-  const fechaEl  = document.getElementById('f_fecha');
-  const horaEl   = document.getElementById('f_hora');
-  const skuEl    = document.getElementById('f_sku');
+  const supEl  = document.getElementById('f_sup');
+  const fechaEl= document.getElementById('f_fecha');
+  const horaEl = document.getElementById('f_hora');
+  const skuEl  = document.getElementById('f_sku');
+
+  // Copiar estado SIN fotos para evitar payload enorme que bloquea el fetch
+  const itemsSinFotos = {};
+  Object.keys(estado).forEach(k => {
+    const v = estado[k];
+    itemsSinFotos[k] = {val:v.val||'', obs:v.obs||'', accion:v.accion||'', photo:''};
+  });
+
   return {
-    id:Date.now(),
+    id:         Date.now(),
     supervisor: supEl   ? supEl.value   : '',
     fecha:      fechaEl ? fechaEl.value : '',
     hora:       horaEl  ? horaEl.value  : '',
@@ -1167,8 +1176,23 @@ function getRec() {
     firma:      getFirmaB64(),
     obs:        '',
     accionInmediata: '',
-    schemes:[...queue], items:{...estado}, nc
+    schemes:    [...queue],
+    items:      itemsSinFotos,  // sin fotos
+    nc                          // nc sí incluye fotos para el PDF
   };
+}
+
+// getRec con fotos — solo para generar el PDF
+function getRecConFotos() {
+  const rec = getRec();
+  // Restaurar fotos del estado original
+  rec.items = {...estado};
+  rec.nc = [];
+  queue.forEach(sid=>SECS[sid].items.forEach((item,idx)=>{
+    const v=estado[`${sid}_${idx}`];
+    if(v&&v.val==='NC') rec.nc.push({sec:SECS[sid].label,item,obs:v.obs||'',accion:v.accion||'',photo:v.photo||''});
+  }));
+  return rec;
 }
 
 
@@ -1347,19 +1371,19 @@ async function guardarYPDF() {
     return;
   }
 
-  const rec = getRec();
-  _rec = rec;
+  const rec = getRec();       // sin fotos — para Sheets y guardado local
+  _rec = getRecConFotos();    // con fotos — para el PDF
   const cfg = getCfg();
 
   // 1. Guardar local
   saveLocal(rec);
   refreshStats();
 
-  // 2. Generar PDF
+  // 2. Generar PDF (con fotos)
   showSpin('Generando PDF...');
   await sleep(150);
   try {
-    _pdf = generarPDF(rec);
+    _pdf = generarPDF(_rec);
   } catch(e) {
     hideSpin();
     toast('Error generando PDF: ' + e.message);
@@ -1464,12 +1488,11 @@ async function soloPDF() {
     toast('Cargando... toca de nuevo en 3 segundos');
     return;
   }
-  const rec = getRec();
-  _rec = rec;
+  _rec = getRecConFotos(); // con fotos para el PDF
   showSpin('Generando PDF...');
   await sleep(150);
   try {
-    _pdf = generarPDF(rec);
+    _pdf = generarPDF(_rec);
   } catch(e) {
     hideSpin();
     toast('Error generando PDF: ' + e.message);
