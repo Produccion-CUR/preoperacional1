@@ -7,29 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="theme-color" content="#0e2044"/>
 <title>Pre-operacional · Comfrut</title>
-<script>
-// Cargar jsPDF con múltiples CDN de respaldo
-(function(){
-  var cdns = [
-    'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-    'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
-    'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js'
-  ];
-  var idx = 0;
-  function loadNext(){
-    if(idx >= cdns.length){ 
-      console.error('jsPDF no pudo cargar desde ningún CDN');
-      window._jspdfFailed = true;
-      return;
-    }
-    var s = document.createElement('script');
-    s.src = cdns[idx++];
-    s.onerror = loadNext;
-    document.head.appendChild(s);
-  }
-  loadNext();
-})();
-</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -934,6 +912,7 @@ function iniciar() {
   queue = ['s1','s2','s3','s4'].filter(s => selEsqs.includes(s));
   qIdx  = 0;
   estado = {};
+  _autoGuardado = false; // reset para nueva inspección
   // Fill read-only fields
   document.getElementById('f_turno_ro').value = selTurnoVal;
   document.getElementById('f_esq_ro').value   = queue.map(s => SECS[s].label).join(' + ');
@@ -954,7 +933,12 @@ function goTo(name) {
   updateNav(name);
   updateProg(name);
   if (name==='check')   buildChecklist();
-  if (name==='resumen') { buildResumen(); setTimeout(initFirma, 80); }
+  if (name==='resumen') {
+    buildResumen();
+    setTimeout(initFirma, 80);
+    // Guardar automáticamente en Sheets y generar PDF al llegar al resumen
+    setTimeout(autoGuardar, 600);
+  }
   if (name==='hist')    renderHist();
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1334,16 +1318,32 @@ function resumenWA() {
   abrirWAPicker(msg, 'Resumen del turno', 'Elige a quién enviar el resumen');
 }
 
-// ─── GUARDAR + PDF ─────────────────────────────────────────────
+// ─── AUTO GUARDADO AL LLEGAR AL RESUMEN ──────────────────────────
+let _autoGuardado = false;
+
+async function autoGuardar() {
+  if (_autoGuardado) return;
+  _autoGuardado = true;
+
+  const rec = getRec();
+  _rec = rec;
+  const cfg = getCfg();
+
+  // Guardar local
+  saveLocal(rec);
+  refreshStats();
+
+  // Enviar a Google Sheets en segundo plano
+  if (cfg.paUrl) {
+    enviarAExcel(cfg.paUrl, rec);
+  }
+}
+
+
 async function guardarYPDF() {
-  // Verificar jsPDF correctamente
-  const jspdfLib = window.jspdf || (window.jspdf = window.jsPDF ? {jsPDF: window.jsPDF} : null);
-  if (!jspdfLib) {
-    toast('Cargando librería PDF... toca de nuevo en 5 segundos');
-    var s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
-    s.onload = () => toast('Listo, toca de nuevo para generar el PDF');
-    document.head.appendChild(s);
+  // Esperar hasta que jsPDF esté disponible (máx 5 segundos)
+  if (!window.jspdf && !window.jsPDF) {
+    toast('Cargando... toca de nuevo en 3 segundos');
     return;
   }
 
@@ -1460,13 +1460,8 @@ async function sincronizarPendientes() {
 }
 
 async function soloPDF() {
-  const jspdfLib = window.jspdf || (window.jspdf = window.jsPDF ? {jsPDF: window.jsPDF} : null);
-  if (!jspdfLib) {
-    toast('Cargando librería PDF... toca de nuevo en 5 segundos');
-    var s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
-    s.onload = () => toast('Listo, toca de nuevo para generar el PDF');
-    document.head.appendChild(s);
+  if (!window.jspdf && !window.jsPDF) {
+    toast('Cargando... toca de nuevo en 3 segundos');
     return;
   }
   const rec = getRec();
@@ -1837,8 +1832,7 @@ function updCfgStatus(cfg){const d=document.getElementById('sDot'),t=document.ge
 
 // ─── PDF ENGINE ────────────────────────────────────────────────
 function generarPDF(rec){
-  // Obtener jsPDF de cualquier forma que haya cargado
-  const {jsPDF} = window.jspdf || {jsPDF: window.jsPDF};
+  const {jsPDF} = window.jspdf || {jsPDF: window.jsPDF} || {};
   const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
   const ML=10,MT=10,CW=190,PH=297;
   const INK=[10,22,40],BLUE=[26,86,118],MID=[91,141,184],LBLUE=[200,223,240];
@@ -2165,6 +2159,7 @@ function resetSKU() {
 function nuevaLinea() {
   // Resetear selecciones de turno y esquema
   turnoSel = ''; selEsqs = []; queue = []; qIdx = 0; estado = {};
+  _autoGuardado = false;
   document.querySelectorAll('.turno-card').forEach(c => c.classList.remove('sel'));
   document.querySelectorAll('.scheme-card').forEach(c => {
     c.classList.remove('sel');
