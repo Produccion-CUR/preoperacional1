@@ -1149,15 +1149,21 @@ function getRec() {
   const nc=[];
   queue.forEach(sid=>SECS[sid].items.forEach((item,idx)=>{
     const v=estado[`${sid}_${idx}`];
-    // No incluir foto en el payload — solo info textual
-    if(v&&v.val==='NC')nc.push({sec:SECS[sid].label,item,obs:v.obs||'',accion:v.accion||'',photo:v.photo||''});
+    // NUNCA incluir foto — solo texto para Sheets
+    if(v&&v.val==='NC')nc.push({
+      sec:    SECS[sid].label,
+      item:   item,
+      obs:    v.obs||'',
+      accion: v.accion||'',
+      photo:  ''   // siempre vacío en getRec
+    });
   }));
   const supEl  = document.getElementById('f_sup');
   const fechaEl= document.getElementById('f_fecha');
   const horaEl = document.getElementById('f_hora');
   const skuEl  = document.getElementById('f_sku');
 
-  // Copiar estado SIN fotos para evitar payload enorme que bloquea el fetch
+  // estado SIN fotos
   const itemsSinFotos = {};
   Object.keys(estado).forEach(k => {
     const v = estado[k];
@@ -1165,20 +1171,20 @@ function getRec() {
   });
 
   return {
-    id:         Date.now(),
-    supervisor: supEl   ? supEl.value   : '',
-    fecha:      fechaEl ? fechaEl.value : '',
-    hora:       horaEl  ? horaEl.value  : '',
-    turno:      selTurnoVal,
-    esquema:    queue.map(s=>SECS[s].label).join(' + '),
-    sku:        skuEl   ? skuEl.value   : '',
-    analista:   '',
-    firma:      getFirmaB64(),
-    obs:        '',
+    id:              Date.now(),
+    supervisor:      supEl   ? supEl.value   : '',
+    fecha:           fechaEl ? fechaEl.value : '',
+    hora:            horaEl  ? horaEl.value  : '',
+    turno:           selTurnoVal,
+    esquema:         queue.map(s=>SECS[s].label).join(' + '),
+    sku:             skuEl   ? skuEl.value   : '',
+    analista:        '',
+    firma:           '',       // nunca incluir firma (base64)
+    obs:             '',
     accionInmediata: '',
-    schemes:    [...queue],
-    items:      itemsSinFotos,  // sin fotos
-    nc                          // nc sí incluye fotos para el PDF
+    schemes:         [...queue],
+    items:           itemsSinFotos,
+    nc               // nc sin fotos
   };
 }
 
