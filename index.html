@@ -7,8 +7,33 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="theme-color" content="#0e2044"/>
 <title>Pre-operacional · Comfrut</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script>
+// Cargar jsPDF con múltiples CDN de respaldo
+(function(){
+  var cdns = [
+    'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+    'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
+    'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js'
+  ];
+  var idx = 0;
+  function loadNext(){
+    if(idx >= cdns.length){ 
+      console.error('jsPDF no pudo cargar desde ningún CDN');
+      window._jspdfFailed = true;
+      return;
+    }
+    var s = document.createElement('script');
+    s.src = cdns[idx++];
+    s.onerror = loadNext;
+    document.head.appendChild(s);
+  }
+  loadNext();
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"></noscript>
 <style>
 :root{
   --bg:#0e2044; --bg2:#1a3a6b; --bg3:#2a5298;
@@ -26,10 +51,10 @@
   --sh-sm:0 2px 8px rgba(6,13,26,.08);
   --sh-md:0 6px 24px rgba(6,13,26,.12);
   --sh-lg:0 16px 48px rgba(6,13,26,.20);
-  --display:'Syne',sans-serif; --mono:'JetBrains Mono',monospace; --body:'Plus Jakarta Sans',sans-serif;
+  --display:'Syne',system-ui,-apple-system,sans-serif; --mono:'JetBrains Mono','Courier New',monospace; --body:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 }
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:var(--body);background:#f0f5fb;color:var(--ink);min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased;padding-bottom:90px;font-size:16px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased}
+body{font-family:var(--body);background:#f0f5fb;color:var(--ink);min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased;padding-bottom:90px;font-size:16px;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 
 /* ── TOPBAR ── */
 .topbar{position:sticky;top:0;z-index:200;background:#0e2044;height:58px;border-bottom:1px solid rgba(255,255,255,.08);padding:0 16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 0 rgba(255,255,255,.04),var(--sh-lg)}
@@ -230,7 +255,7 @@ body{font-family:var(--body);background:#f0f5fb;color:var(--ink);min-height:100v
 .field{margin-bottom:14px}
 .fl{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--mist);margin-bottom:6px;display:flex;align-items:center;gap:4px}
 .req{color:var(--amber)}
-.field input,.field select,.field textarea{width:100%;padding:12px 14px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:var(--body);font-size:15px;color:var(--ink);transition:border .18s,box-shadow .18s;-webkit-appearance:none;appearance:none;box-shadow:var(--sh-xs)}
+.field input,.field select,.field textarea{width:100%;padding:12px 14px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:var(--body);font-size:16px;color:var(--ink);transition:border .18s,box-shadow .18s;-webkit-appearance:none;appearance:none;box-shadow:var(--sh-xs)}
 .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:#4a90d9;box-shadow:0 0 0 3px rgba(74,144,217,.15)}
 .field textarea{resize:none;min-height:76px;line-height:1.6}
 .field select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237a96b4' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center;padding-right:38px}
@@ -239,7 +264,7 @@ body{font-family:var(--body);background:#f0f5fb;color:var(--ink);min-height:100v
 /* ══════════════════════════════════════
    CHECKLIST
 ══════════════════════════════════════ */
-.chk-list{background:var(--surface)}
+.chk-list{background:var(--surface);-webkit-overflow-scrolling:touch}
 .chk-item{display:flex;align-items:center;padding:13px 14px;border-bottom:1px solid var(--surf3);gap:10px;transition:background .12s;min-height:56px}
 .chk-item:last-child{border-bottom:none}
 .chk-item.is-c{background:#f0fdf8}
@@ -247,7 +272,7 @@ body{font-family:var(--body);background:#f0f5fb;color:var(--ink);min-height:100v
 .chk-item.is-na{background:#f0f9ff}
 .item-name{flex:1;font-size:13px;font-weight:500;color:var(--ink2);line-height:1.35;min-width:0}
 .cnc{display:flex;gap:3px;flex-shrink:0}
-.cb{height:42px;min-width:46px;border-radius:var(--r-sm);border:1.5px solid var(--border);background:var(--surf2);font-family:var(--mono);font-size:13px;font-weight:700;color:var(--fog);cursor:pointer;transition:all .12s;display:flex;align-items:center;justify-content:center}
+.cb{height:44px;min-width:48px;border-radius:var(--r-sm);border:1.5px solid var(--border);background:var(--surf2);font-family:var(--mono);font-size:13px;font-weight:700;color:var(--fog);cursor:pointer;transition:all .12s;display:flex;align-items:center;justify-content:center}
 .cb:active{transform:scale(.88)}
 .cb.C{background:#e8f5e9;border-color:#2e7d32;color:#1b5e20;box-shadow:0 0 0 2px rgba(46,125,50,.1)}
 .cb.NC{background:var(--nc-bg);border-color:var(--nc);color:var(--nc-txt);box-shadow:0 0 0 2px rgba(255,75,75,.1)}
@@ -342,7 +367,7 @@ body{font-family:var(--body);background:#f0f5fb;color:var(--ink);min-height:100v
 /* ══════════════════════════════════════
    NAV BAR
 ══════════════════════════════════════ */
-.nav{position:fixed;bottom:0;left:0;right:0;z-index:150;padding:10px 14px max(10px,env(safe-area-inset-bottom));background:rgba(255,255,255,.96);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--border);display:flex;gap:8px;box-shadow:0 -8px 32px rgba(6,13,26,.07)}
+.nav{position:fixed;bottom:0;left:0;right:0;z-index:150;padding:10px 14px max(10px,env(safe-area-inset-bottom));background:rgba(255,255,255,.96);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-top:1px solid var(--border);display:flex;gap:8px;box-shadow:0 -8px 32px rgba(6,13,26,.07)}
 .nb{border:none;border-radius:var(--r-sm);font-family:var(--display);font-size:13px;font-weight:700;cursor:pointer;padding:13px 16px;transition:all .18s;letter-spacing:-.2px}
 .nb:active{transform:scale(.97)}
 .nb-back{flex:0 0 auto;background:var(--surf2);color:var(--ink3);border:1.5px solid var(--border);padding:13px 18px}
@@ -396,7 +421,7 @@ body{font-family:var(--body);background:#f0f5fb;color:var(--ink);min-height:100v
 /* ══════════════════════════════════════
    BOTTOM SHEET + TOAST + SPINNER
 ══════════════════════════════════════ */
-.sh-ov{display:none;position:fixed;inset:0;z-index:400;background:rgba(6,13,26,.6);backdrop-filter:blur(4px);align-items:flex-end}
+.sh-ov{display:none;position:fixed;inset:0;z-index:400;background:rgba(6,13,26,.6);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);align-items:flex-end}
 .sh-ov.open{display:flex;animation:fadeBg .2s ease}
 @keyframes fadeBg{from{opacity:0}to{opacity:1}}
 .sh-body{background:var(--surface);border-radius:var(--r-xl) var(--r-xl) 0 0;width:100%;max-width:480px;margin:0 auto;padding:18px 18px max(18px,env(safe-area-inset-bottom));animation:shUp .28s cubic-bezier(.34,1.4,.64,1);max-height:85vh;overflow-y:auto}
@@ -442,7 +467,7 @@ body{font-family:var(--body);background:#f0f5fb;color:var(--ink);min-height:100v
 .nc-wa-btn-icon{font-size:17px}
 
 /* WA Contact Picker */
-.wa-picker-overlay{display:none;position:fixed;inset:0;z-index:600;background:rgba(6,13,26,.65);backdrop-filter:blur(4px);align-items:flex-end;justify-content:center}
+.wa-picker-overlay{display:none;position:fixed;inset:0;z-index:600;background:rgba(6,13,26,.65);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);align-items:flex-end;justify-content:center}
 .wa-picker-overlay.open{display:flex;animation:fadeBg .2s ease}
 .wa-picker-sheet{background:var(--surface);border-radius:var(--r-xl) var(--r-xl) 0 0;width:100%;max-width:480px;padding:18px 16px max(18px,env(safe-area-inset-bottom));animation:shUp .28s cubic-bezier(.34,1.4,.64,1);max-height:80vh;overflow-y:auto}
 .wa-picker-handle{width:32px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px}
@@ -580,13 +605,13 @@ body{font-family:var(--body);background:#f0f5fb;color:var(--ink);min-height:100v
         <input type="time" id="f_hora"/></div>
     </div>
     <div class="field"><div class="fl">Turno</div>
-      <input type="text" id="f_turno_ro" readonly style="background:var(--surf2);color:var(--ink3);font-size:14px"/></div>
+      <input type="text" id="f_turno_ro" readonly style="background:var(--surf2);color:var(--ink3);font-size:16px;cursor:default"/></div>
     <div class="field"><div class="fl">Esquemas</div>
-      <input type="text" id="f_esq_ro" readonly style="background:var(--surf2);color:var(--ink3);font-size:13px"/></div>
+      <input type="text" id="f_esq_ro" readonly style="background:var(--surf2);color:var(--ink3);font-size:16px;cursor:default"/></div>
     <div class="field"><div class="fl">SKU Procesado <span class="req">*</span></div>
       <div style="display:flex;flex-direction:column;gap:8px">
         <!-- Paso 1: Fruta -->
-        <select id="f_sku_fruta" onchange="onFrutaChange()" style="width:100%;padding:12px 14px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:var(--body);font-size:15px;color:var(--ink);-webkit-appearance:none;appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%235a7eb4%22 stroke-width=%222.5%22%3E%3Cpath d=%22m6 9 6 6 6-6%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 13px center;padding-right:38px">
+        <select id="f_sku_fruta" onchange="onFrutaChange()" style="width:100%;padding:12px 14px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:var(--body);font-size:16px;color:var(--ink);-webkit-appearance:none;appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%235a7eb4%22 stroke-width=%222.5%22%3E%3Cpath d=%22m6 9 6 6 6-6%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 13px center;padding-right:38px">
           <option value="">— Selecciona la fruta —</option>
           <option value="Frutilla">Frutilla</option>
           <option value="Frambuesa">Frambuesa</option>
@@ -1304,36 +1329,61 @@ function resumenWA() {
 
 // ─── GUARDAR + PDF ─────────────────────────────────────────────
 async function guardarYPDF() {
-  const rec=getRec(); _rec=rec;
-  const cfg=getCfg();
-
-  // ── PASO 1: Guardar local INMEDIATAMENTE (sin esperar red)
-  saveLocal(rec); refreshStats();
-
-  // ── PASO 2: Generar PDF INMEDIATAMENTE
-  showSpin('Generando PDF...');
-  await sleep(80);
-  _pdf = generarPDF(rec);
-  hideSpin();
-
-  // ── PASO 3: Mostrar PDF al supervisor sin demora
-  pdfDescargaDirecta();
-
-  // ── PASO 4: Enviar a Excel (Power Automate) EN SEGUNDO PLANO
-  if (cfg.paUrl) {
-    enviarAExcel(cfg.paUrl, rec); // sin await — corre en paralelo
-  } else {
-    toast('⚠ Configura la URL de Power Automate en ⚙');
+  // Verificar jsPDF correctamente
+  const jspdfLib = window.jspdf || (window.jspdf = window.jsPDF ? {jsPDF: window.jsPDF} : null);
+  if (!jspdfLib) {
+    toast('Cargando librería PDF... toca de nuevo en 5 segundos');
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+    s.onload = () => toast('Listo, toca de nuevo para generar el PDF');
+    document.head.appendChild(s);
+    return;
   }
 
-  // ── PASO 5: Alerta NC si corresponde
-  if (rec.nc.length > 0 && (cfg.wa1||cfg.wa2)) {
-    setTimeout(()=>showSheet('🚨 NC detectadas',
-      `Hay ${rec.nc.length} NC. ¿Enviar alerta al grupo de WhatsApp?`,
-      `<button class="act-btn abt-nc-wa" style="margin-top:4px" onclick="alertaNC();closeSheet()">
-        <div class="a-icon">📢</div>
-        <div class="a-body"><div class="a-title">Enviar alerta NC</div><div class="a-sub">Jefe de Área + Mantención</div></div>
-      </button>`), 1400);
+  const rec = getRec();
+  _rec = rec;
+  const cfg = getCfg();
+
+  // 1. Guardar local
+  saveLocal(rec);
+  refreshStats();
+
+  // 2. Generar PDF
+  showSpin('Generando PDF...');
+  await sleep(150);
+  try {
+    _pdf = generarPDF(rec);
+  } catch(e) {
+    hideSpin();
+    toast('Error generando PDF: ' + e.message);
+    console.error(e);
+    return;
+  }
+  hideSpin();
+
+  // 3. Mostrar PDF
+  pdfDescargaDirecta();
+
+  // 4. Guardar en Google Sheets automáticamente
+  if (cfg.paUrl) {
+    toast('Guardando en Google Sheets...');
+    enviarAExcel(cfg.paUrl, rec);
+  } else {
+    toast('Configura Google Sheets en ⚙ Config');
+  }
+
+  // 5. Alerta NC
+  const contactos = cfg.contactos || [];
+  if (rec.nc.length > 0 && contactos.length > 0) {
+    setTimeout(() => {
+      showSheet('NC detectadas',
+        `Hay ${rec.nc.length} NC. ¿Enviar alerta?`,
+        `<button class="act-btn abt-nc-wa" style="margin-top:4px" onclick="alertaNC();closeSheet()">
+          <div class="a-icon">📢</div>
+          <div class="a-body"><div class="a-title">Enviar alerta NC</div><div class="a-sub">WhatsApp al grupo</div></div>
+        </button>`
+      );
+    }, 1200);
   }
 }
 
@@ -1393,9 +1443,28 @@ async function sincronizarPendientes() {
 }
 
 async function soloPDF() {
-  const rec=getRec(); _rec=rec;
-  showSpin('Generando PDF oficial...'); await sleep(200);
-  _pdf=generarPDF(rec); hideSpin();
+  const jspdfLib = window.jspdf || (window.jspdf = window.jsPDF ? {jsPDF: window.jsPDF} : null);
+  if (!jspdfLib) {
+    toast('Cargando librería PDF... toca de nuevo en 5 segundos');
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+    s.onload = () => toast('Listo, toca de nuevo para generar el PDF');
+    document.head.appendChild(s);
+    return;
+  }
+  const rec = getRec();
+  _rec = rec;
+  showSpin('Generando PDF...');
+  await sleep(150);
+  try {
+    _pdf = generarPDF(rec);
+  } catch(e) {
+    hideSpin();
+    toast('Error generando PDF: ' + e.message);
+    console.error(e);
+    return;
+  }
+  hideSpin();
   pdfDescargaDirecta();
 }
 
@@ -1508,47 +1577,67 @@ function mostrarResultado(tipo, msg) {
 function pdfDescargaDirecta() {
   if(!_pdf||!_rec)return;
   const fname=`PreOperacional_${_rec.fecha||'hoy'}_${(_rec.turno||'T').replace(/\s/g,'')}_${(_rec.sku||'SKU').replace(/[^a-zA-Z0-9]/g,'-')}.pdf`;
-  // Usar datauri — funciona en iOS Safari, Android Chrome y Desktop
-  const dataUri = _pdf.output('datauristring');
-  const isIOS   = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isAndroid = /Android/.test(navigator.userAgent);
+
+  // Generar blob (funciona en todos los dispositivos)
+  const blob = _pdf.output('blob');
+  const blobUrl = URL.createObjectURL(blob);
 
   // Mostrar PDF embebido en el modal
   const frame = document.getElementById('pdfFrame');
-  frame.innerHTML = '';
-  // Crear objeto embed con el data URI
-  const embed = document.createElement('embed');
-  embed.src    = dataUri;
-  embed.type   = 'application/pdf';
-  embed.style.cssText = 'width:100%;height:100%;border:none';
-  frame.appendChild(embed);
-
-  // Actualizar título del modal
-  document.getElementById('pdfModalTopTitle').textContent = fname;
-
-  // Botón guardar/compartir
-  const saveBtn = document.getElementById('pdfSaveBtn');
-  if (isIOS) {
-    saveBtn.textContent = '↑ Compartir / Guardar en Archivos';
-    saveBtn.onclick = () => {
-      // En iOS: abrir en nueva pestaña para poder compartir
-      const a = document.createElement('a');
-      a.href = dataUri; a.target = '_blank'; a.rel = 'noopener';
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    };
-  } else {
-    saveBtn.textContent = '⬇ Descargar PDF';
-    saveBtn.onclick = () => {
-      const a = document.createElement('a');
-      a.href = dataUri; a.download = fname; a.style.display = 'none';
-      document.body.appendChild(a); a.click();
-      setTimeout(()=>document.body.removeChild(a), 500);
-    };
+  if(frame){
+    frame.innerHTML = '';
+    if(!isIOS){
+      // Android y Desktop: embed directo
+      const embed = document.createElement('embed');
+      embed.src = blobUrl;
+      embed.type = 'application/pdf';
+      embed.style.cssText = 'width:100%;height:100%;border:none';
+      frame.appendChild(embed);
+    } else {
+      // iOS: mostrar mensaje ya que Safari no embebe PDFs de blob
+      frame.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px;padding:24px;text-align:center">
+        <div style="font-size:48px">📄</div>
+        <div style="font-family:var(--display);font-size:16px;font-weight:700;color:#fff">${fname}</div>
+        <div style="font-size:13px;color:rgba(255,255,255,.5)">Toca el botón de abajo para abrir o compartir el PDF</div>
+      </div>`;
+    }
   }
-  const _pvm=document.getElementById('pdfViewModal');if(_pvm)_pvm.style.display='flex';
+
+  // Actualizar título
+  const titleEl = document.getElementById('pdfModalTopTitle');
+  if(titleEl) titleEl.textContent = fname;
+
+  // Botón guardar
+  const saveBtn = document.getElementById('pdfSaveBtn');
+  if(saveBtn){
+    if(isIOS){
+      saveBtn.textContent = '↑ Abrir / Compartir PDF';
+      saveBtn.onclick = () => {
+        // iOS: abrir en nueva pestaña → desde ahí se puede compartir o guardar en Archivos
+        const a = document.createElement('a');
+        a.href = blobUrl; a.target = '_blank'; a.rel = 'noopener';
+        document.body.appendChild(a); a.click();
+        setTimeout(()=>document.body.removeChild(a), 1000);
+      };
+    } else {
+      saveBtn.textContent = '⬇ Descargar PDF';
+      saveBtn.onclick = () => {
+        const a = document.createElement('a');
+        a.href = blobUrl; a.download = fname; a.style.display = 'none';
+        document.body.appendChild(a); a.click();
+        setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(blobUrl); }, 2000);
+      };
+    }
+  }
+
+  const _pvm = document.getElementById('pdfViewModal');
+  if(_pvm) _pvm.style.display = 'flex';
 }
 
 function pdfDescargar(){ pdfDescargaDirecta() }
-function closePDF(){ const _pvm2=document.getElementById('pdfViewModal');if(_pvm2)_pvm2.style.display='none'; document.getElementById('pdfFrame').innerHTML=''; }
+function closePDF(){ const _pvm2=document.getElementById('pdfViewModal');if(_pvm2)_pvm2.style.display='none'; const fr=document.getElementById('pdfFrame');if(fr)fr.innerHTML=''; }
 function pdfMail(){
   if(!_rec)return; pdfDescargar();
   const r=_rec,cfg=getCfg();
@@ -1696,7 +1785,8 @@ function updCfgStatus(cfg){const d=document.getElementById('sDot'),t=document.ge
 
 // ─── PDF ENGINE ────────────────────────────────────────────────
 function generarPDF(rec){
-  const {jsPDF}=window.jspdf;
+  // Obtener jsPDF de cualquier forma que haya cargado
+  const {jsPDF} = window.jspdf || {jsPDF: window.jsPDF};
   const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
   const ML=10,MT=10,CW=190,PH=297;
   const INK=[10,22,40],BLUE=[26,86,118],MID=[91,141,184],LBLUE=[200,223,240];
