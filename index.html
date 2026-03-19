@@ -1365,45 +1365,39 @@ async function autoGuardar() {
 
 
 async function guardarYPDF() {
-  // Esperar hasta que jsPDF esté disponible (máx 5 segundos)
-  if (!window.jspdf && !window.jsPDF) {
-    toast('Cargando... toca de nuevo en 3 segundos');
-    return;
-  }
-
-  const rec = getRec();       // sin fotos — para Sheets y guardado local
-  _rec = getRecConFotos();    // con fotos — para el PDF
   const cfg = getCfg();
+  const rec = getRec();
+  _rec = getRecConFotos();
 
-  // 1. Guardar local
+  // ── 1. Guardar local siempre
   saveLocal(rec);
   refreshStats();
 
-  // 2. Generar PDF (con fotos)
-  showSpin('Generando PDF...');
-  await sleep(150);
-  try {
-    _pdf = generarPDF(_rec);
-  } catch(e) {
-    hideSpin();
-    toast('Error generando PDF: ' + e.message);
-    console.error(e);
-    return;
-  }
-  hideSpin();
-
-  // 3. Mostrar PDF
-  pdfDescargaDirecta();
-
-  // 4. Guardar en Google Sheets automáticamente
+  // ── 2. Enviar a Sheets (sin esperar)
   if (cfg.paUrl) {
-    toast('Guardando en Google Sheets...');
     enviarAExcel(cfg.paUrl, rec);
   } else {
-    toast('Configura Google Sheets en ⚙ Config');
+    toast('Configura Google Sheets en ⚙');
   }
 
-  // 5. Alerta NC
+  // ── 3. Generar PDF (independiente de Sheets)
+  if (!window.jspdf && !window.jsPDF) {
+    toast('Registro guardado. PDF: recarga la app e intenta de nuevo.');
+    return;
+  }
+
+  showSpin('Generando PDF...');
+  await sleep(200);
+  try {
+    _pdf = generarPDF(_rec);
+    hideSpin();
+    pdfDescargaDirecta();
+  } catch(e) {
+    hideSpin();
+    toast('Error en PDF: ' + e.message);
+  }
+
+  // ── 4. Alerta NC
   const contactos = cfg.contactos || [];
   if (rec.nc.length > 0 && contactos.length > 0) {
     setTimeout(() => {
@@ -1417,6 +1411,9 @@ async function guardarYPDF() {
     }, 1200);
   }
 }
+
+
+
 
 // Envío a Excel via Power Automate — con reintentos automáticos
 async function enviarAExcel(url, rec, intento=1) {
