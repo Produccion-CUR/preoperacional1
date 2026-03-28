@@ -859,7 +859,7 @@ const SECS = {
   s1:{label:'Túnel Continuo (Esquema 1)',items:['Air clean','Despiedrador','Despalillador','Tina lavada de fruta','Secadoras','BBC (selector de fruta)','Tomra neón','Aspersores','Urschel (Frutilla)','Cinta descarte','Imán N°1','Elevador 1','Zaranda ingreso túnel','Cinta túnel','Cinta salida de túnel','Bühler','Elevador 2','Elevador 3','Cinta madre','Tolvas de descarga','Balanzas dinámicas','Vidrios y plásticos duros','Fijaciones, tuercas pernos']},
   s2:{label:'Esquema 3',items:['Cinta metálica','Air clean','Elevador 1','Zaranda','Bühler','Aspersores','Cinta descarte','Elevador 2','Cinta de inspección','Imán N°2','Lavado de fruta','Vidrios y plásticos duros','Tolvas de descarga','Balanzas','Fijaciones, tuercas pernos']},
   s3:{label:'Tomra (Esquema 4)',items:['Cinta de inspección','Elevador','Zaranda','Línea Desechos','Selecionadora Tomra','Línea Descarte','Elevadores','Aspersores','Cinta madre','Tolva de descarga','Vidrio y plástico duro','Fijaciones, tuercas pernos']},
-  s4:{label:'Sala Proceso',items:['Motores de maquinarias','Mesas','Plataformas','Balanzas','Vidrios y plásticos duro','Equipos libres de condensación','Pisos','Cielos','Luminarias','Paredes','Zocalos','Puertas','Basureros','Lavado de mano','Bandejas utilizadas en buen estado y en orden correcto.','Fijaciones, tuercas pernos']},
+  s4:{label:'Sala Proceso Selección',items:['Motores de maquinarias','Mesas','Plataformas','Balanzas','Vidrios y plásticos duro','Equipos libres de condensación','Pisos','Cielos','Luminarias','Paredes','Zocalos','Puertas','Basureros','Lavado de mano','Bandejas utilizadas en buen estado y en orden correcto.','Fijaciones, tuercas pernos']},
   e1:{label:'Envasadora N° 1',items:['Tolvas alimentación','Elevadores','Cono alimentación','Vibradores','Dosificadores superiores','Dosificadores intermedios','Dosificadores inferiores','Cono de llenado','Chute de descarga','Pinzas','Ventosas','Selladora (cajas y bolsas)','Cintas / uniones','Selladora manual','Detector de metal','Chequeador de peso','Equipos móviles','Vidrios y plásticos duro','Fijaciones, tuercas, pernos','Motores sin filtración','Los materiales presentes en la sala corresponden al SKU a procesar.']},
   e2:{label:'Esquema 5',items:['Zaranda','Air clean','Lavado de fruta','Cintas madre','Cintas de inspección','Imán N°5','Vidrio y plástico duro','Motores sin filtración','Fijaciones, tuercas pernos']},
   e3:{label:'Sala Proceso Envasado',items:['Cielos','Luminarias','Paredes','Zócalos','Puertas','Basureros','Mesas y carrileras','Plataformas','Lavado de mano','Dispensadores','Uso correcto de bandejas']}
@@ -874,12 +874,12 @@ const SALAS = {
     {id:'s1',name:'Túnel Continuo',sub:'Esquema 1 · 23 ítems'},
     {id:'s2',name:'Esquema 3',sub:'15 ítems'},
     {id:'s3',name:'Tomra',sub:'Esquema 4 · 12 ítems'},
-    {id:'s4',name:'Sala Proceso',sub:'16 ítems'}
+    {id:'s4',name:'Sala Proceso Selección',sub:'16 ítems'}
   ],
   envasado: [
     {id:'e1',name:'Envasadora N° 1',sub:'21 ítems'},
     {id:'e2',name:'Esquema 5',sub:'9 ítems'},
-    {id:'e3',name:'Sala Proceso',sub:'11 ítems'}
+    {id:'e3',name:'Sala Proceso Envasado',sub:'11 ítems'}
   ]
 };
 
@@ -1562,7 +1562,7 @@ async function soloPDF() {
 
 function buildPayload(rec){
   // Mapa de códigos a nombres completos
-  const schemeNames = {s1:'Túnel Continuo (Esquema 1)', s2:'Esquema 3', s3:'Tomra (Esquema 4)', s4:'Sala Proceso'};
+  const schemeNames = {s1:'Túnel Continuo (Esquema 1)', s2:'Esquema 3', s3:'Tomra (Esquema 4)', s4:'Sala Proceso Selección'};
 
   // Nombres completos de esquemas seleccionados
   const schemesNombres = rec.schemes
@@ -1973,7 +1973,7 @@ function generarPDF(rec){
       s1:'Túnel Continuo',
       s2:'Esquema 3',
       s3:'Tomra Esq.4',
-      s4:'Sala Proceso'
+      s4:'Sala Proceso Selección'
     };
     const selectedNames = (r.schemes||[]).map(s=>schemeNameMap[s]||s).filter(Boolean);
     selectedNames.forEach((name,i)=>{
