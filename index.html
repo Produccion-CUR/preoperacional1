@@ -548,7 +548,7 @@ body{font-family:var(--body);background:#f0f5fb;color:var(--ink);min-height:100v
 
     <!-- TURNO -->
     <div class="sel-label"><span class="sel-label-num">2</span>Selecciona el turno</div>
-    <div class="turno-grid">
+    <div class="turno-grid" id="turnoGrid">
       <div class="turno-card" data-t="Dia" onclick="selTurno(this)">
         <div class="turno-icon">☀️</div>
         <div class="turno-name">Día</div>
@@ -930,9 +930,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ─── HOME: TURNO ────────────────────────────────────────────
 function selTurno(card) {
-  document.querySelectorAll('.turno-card').forEach(c => c.classList.remove('sel'));
-  document.querySelectorAll('#salaGrid .turno-card').forEach(c=>c.classList.remove('sel'));
-  const _sg=document.getElementById('schemeGrid');if(_sg)_sg.innerHTML='';
+  // Solo resetear tarjetas de turno — no afectar sala ni esquemas
+  document.querySelectorAll('#turnoGrid .turno-card').forEach(c => c.classList.remove('sel'));
   card.classList.add('sel');
   selTurnoVal = card.dataset.t;
   checkStartReady();
@@ -2239,8 +2238,8 @@ function resetSKU() {
 function nuevaLinea() {
   // Resetear selecciones de turno y esquema
   turnoSel = ''; selEsqs = []; queue = []; qIdx = 0; estado = {}; salaSel = '';
-  document.querySelectorAll('.turno-card').forEach(c => c.classList.remove('sel'));
-  document.querySelectorAll('#salaGrid .turno-card').forEach(c=>c.classList.remove('sel'));
+  document.querySelectorAll('#turnoGrid .turno-card').forEach(c => c.classList.remove('sel'));
+  document.querySelectorAll('#salaGrid .turno-card').forEach(c => c.classList.remove('sel'));
   const _sg=document.getElementById('schemeGrid');if(_sg)_sg.innerHTML='';
   document.querySelectorAll('.scheme-card').forEach(c => {
     c.classList.remove('sel');
