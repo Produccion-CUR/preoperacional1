@@ -612,7 +612,7 @@ body{font-family:var(--body);background:#f0f5fb;color:var(--ink);min-height:100v
       <input type="text" id="f_turno_ro" readonly style="background:var(--surf2);color:var(--ink3);font-size:16px;cursor:default"/></div>
     <div class="field"><div class="fl">Esquemas</div>
       <input type="text" id="f_esq_ro" readonly style="background:var(--surf2);color:var(--ink3);font-size:16px;cursor:default"/></div>
-    <div class="field"><div class="fl">SKU Procesado <span class="req">*</span></div>
+    <div id="skuWrap"><div class="field"><div class="fl">SKU Procesado <span class="req">*</span></div>
       <div style="display:flex;flex-direction:column;gap:8px">
         <!-- Paso 1: Fruta -->
         <select id="f_sku_fruta" onchange="onFrutaChange()" style="width:100%;padding:12px 14px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:var(--body);font-size:16px;color:var(--ink);-webkit-appearance:none;appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%235a7eb4%22 stroke-width=%222.5%22%3E%3Cpath d=%22m6 9 6 6 6-6%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 13px center;padding-right:38px">
@@ -634,7 +634,7 @@ body{font-family:var(--body);background:#f0f5fb;color:var(--ink);min-height:100v
           <button onclick="resetSKU()" style="margin-left:auto;background:none;border:none;color:#4a90d9;cursor:pointer;font-size:13px;padding:0">✕</button>
         </div>
       </div>
-    </div>
+    </div></div>
 
   </div>
 </div>
@@ -942,13 +942,25 @@ function selEsq(card) {
   const s = card.dataset.s;
   card.classList.toggle('sel');
   const isSelected = card.classList.contains('sel');
-  // Actualizar checkmark
   const chk = card.querySelector('.scheme-chk');
   if (chk) chk.textContent = isSelected ? '✓' : '';
-  // Actualizar estado
   if (selEsqs.includes(s)) selEsqs = selEsqs.filter(x => x !== s);
   else selEsqs.push(s);
+  // Mostrar/ocultar campo SKU según selección
+  actualizarVisibilidadSKU();
   checkStartReady();
+}
+
+function actualizarVisibilidadSKU() {
+  const skuWrap = document.getElementById('skuWrap');
+  if (!skuWrap) return;
+  if (skuRequerido()) {
+    skuWrap.style.display = 'block';
+  } else {
+    skuWrap.style.display = 'none';
+    // Limpiar SKU si no es requerido
+    resetSKU();
+  }
 }
 
 function checkStartReady() {
@@ -1032,10 +1044,23 @@ function navPrev() {
   else if (curScr==='hist'||curScr==='config') goTo('home');
 }
 
+
+// SKU solo requerido si hay esquemas de línea (no solo sala de proceso)
+function skuRequerido() {
+  const soloSala = selEsqs.length > 0 && selEsqs.every(s => s === 's4' || s === 'e3');
+  return !soloSala;
+}
+
 // ─── VALIDATE ────────────────────────────────────────────────
 function validar() {
-  for (const [id,lbl] of [['f_sup','Supervisor'],['f_fecha','Fecha'],['f_hora','Hora'],['f_sku','SKU']]) {
+  const camposBásicos = [['f_sup','Supervisor'],['f_fecha','Fecha'],['f_hora','Hora']];
+  for (const [id,lbl] of camposBásicos) {
     if (!document.getElementById(id).value.trim()) { toast(`⚠ Completa: ${lbl}`); document.getElementById(id).focus(); return false; }
+  }
+  // SKU solo requerido si no es solo sala de proceso
+  if (skuRequerido()) {
+    const skuEl = document.getElementById('f_sku');
+    if (!skuEl || !skuEl.value.trim()) { toast('⚠ Completa: SKU Procesado'); return false; }
   }
   return true;
 }
@@ -1405,7 +1430,7 @@ async function autoGuardar() {
   const cfg = getCfg();
   saveLocal(rec);
   refreshStats();
-  if (cfg.paUrl) enviarAExcel(cfg.paUrl, rec);
+  if (cfg.paUrl) enviarFilasPorEsquema(cfg.paUrl, rec);
 }
 
 // ─── GUARDAR + PDF ─────────────────────────────────────────────
@@ -1469,12 +1494,20 @@ async function guardarYPDF() {
 }
 
 // Envío a Excel via Power Automate — con reintentos automáticos
-async function enviarAExcel(url, rec, intento=1) {
+// Enviar una fila por cada esquema seleccionado
+function enviarFilasPorEsquema(url, rec) {
+  const esquemas = rec.schemes && rec.schemes.length > 0 ? rec.schemes : [null];
+  esquemas.forEach((sid, i) => {
+    setTimeout(() => enviarAExcel(url, rec, 1, sid), i * 400);
+  });
+}
+
+async function enviarAExcel(url, rec, intento=1, esquemaId=null) {
   try {
     await fetch(url, {
       method: 'POST',
       mode:   'no-cors',
-      body:   JSON.stringify(buildPayload(rec))
+      body:   JSON.stringify(buildPayload(rec, esquemaId))
     });
     toast('Guardado en Google Sheets');
     marcarSincronizado(rec.id);
@@ -1559,116 +1592,54 @@ async function soloPDF() {
   pdfDescargaDirecta();
 }
 
-function buildPayload(rec){
-  // Mapa de códigos a nombres completos
-  const schemeNames = {s1:'Túnel Continuo (Esquema 1)', s2:'Esquema 3', s3:'Tomra (Esquema 4)', s4:'Sala Proceso Selección'};
+function buildPayload(rec, esquemaId=null){
+  const schemeNames = {
+    s1:'Túnel Continuo (Esquema 1)', s2:'Esquema 3',
+    s3:'Tomra (Esquema 4)', s4:'Sala Proceso Selección',
+    e1:'Envasadora N° 1', e2:'Esquema 5', e3:'Sala Proceso Envasado'
+  };
 
-  // Nombres completos de esquemas seleccionados
-  const schemesNombres = rec.schemes
-    ? rec.schemes.map(s => schemeNames[s] || s).join(' | ')
-    : '';
+  // NC filtradas por esquema específico si se pasó uno
+  const ncFiltradas = rec.nc
+    ? (esquemaId && SECS[esquemaId]
+        ? rec.nc.filter(n => n.sec === SECS[esquemaId].label)
+        : rec.nc)
+    : [];
 
-  // NC con observación Y acción correctiva
-  const ncDetalle = rec.nc
-    ? rec.nc.map(n => {
-        let txt = n.item;
-        if (n.obs)    txt += ' | Obs: '    + n.obs;
-        if (n.accion) txt += ' | Accion: ' + n.accion;
-        return txt;
-      }).join(' // ')
-    : '';
+  const ncDetalle = ncFiltradas.map(n => {
+    let txt = n.item;
+    if (n.obs)    txt += ' | Obs: '    + n.obs;
+    if (n.accion) txt += ' | Accion: ' + n.accion;
+    return txt;
+  }).join(' // ');
 
-  // Acción correctiva consolidada (todas las NC)
-  const accionCorrectiva = rec.nc
-    ? rec.nc.filter(n => n.accion).map(n => n.item + ': ' + n.accion).join(' | ')
-    : '';
+  const accionCorrectiva = ncFiltradas
+    .filter(n => n.accion)
+    .map(n => n.item + ': ' + n.accion)
+    .join(' | ');
+
+  const esquemaNombre = esquemaId
+    ? (schemeNames[esquemaId] || esquemaId)
+    : (rec.schemes ? rec.schemes.map(s => schemeNames[s]||s).join(' | ') : rec.esquema||'');
 
   return {
-    timestamp:          new Date().toISOString(),
-    supervisor:         rec.supervisor  || '',
-    fecha:              rec.fecha       || '',
-    hora:               rec.hora        || '',
-    turno:              rec.turno       || '',
-    esquema:            rec.esquema     || '',
-    sku:                rec.sku         || '',
-    obs:                rec.obs         || '',
-    nc_count:           rec.nc ? rec.nc.length : 0,
-    nc_detalle:         ncDetalle,
-    accion_correctiva:  accionCorrectiva,
-    schemes:            schemesNombres,
-    analista:           rec.analista    || ''
+    timestamp:         new Date().toISOString(),
+    supervisor:        rec.supervisor || '',
+    fecha:             rec.fecha      || '',
+    hora:              rec.hora       || '',
+    turno:             rec.turno      || '',
+    esquema:           esquemaNombre,
+    sku:               rec.sku        || '',
+    obs:               rec.obs        || '',
+    nc_count:          ncFiltradas.length,
+    nc_detalle:        ncDetalle,
+    accion_correctiva: accionCorrectiva,
+    schemes:           esquemaNombre,
+    sala:              rec.sala       || '',
+    analista:          rec.analista   || ''
   };
 }
 
-// ── PROBAR CONEXIÓN CON POWER AUTOMATE ───────────────────────────
-async function probarConexion() {
-  const url = document.getElementById('cfg_url').value.trim();
-
-  if (!url) {
-    mostrarResultado('error', 'No hay URL configurada.\nLa URL debería aparecer automáticamente.');
-    return;
-  }
-  if (!url.includes('script.google.com')) {
-    mostrarResultado('warn',
-      'La URL no parece ser de Google Apps Script.\n' +
-      'Debe contener: script.google.com/macros/s/.../exec\n\n' +
-      'Verifica en ⚙ Config que la URL esté correcta.'
-    );
-    return;
-  }
-
-  mostrarResultado('loading', 'Enviando prueba a Google Sheets...');
-
-  const testPayload = {
-    timestamp:          new Date().toISOString(),
-    supervisor:         'PRUEBA DE CONEXION',
-    fecha:              new Date().toISOString().split('T')[0],
-    hora:               new Date().toTimeString().slice(0,5),
-    turno:              'Test',
-    esquema:            'Test',
-    sku:                'TEST-CONEXION',
-    obs:                '',
-    nc_count:           0,
-    nc_detalle:         '',
-    accion_correctiva:  '',
-    schemes:            'Prueba',
-    analista:           ''
-  };
-
-  try {
-    await fetch(url, {
-      method: 'POST',
-      mode:   'no-cors',
-      body:   JSON.stringify(testPayload)
-    });
-    mostrarResultado('success',
-      '✓ Solicitud enviada correctamente.\n\n' +
-      'Abre tu Google Sheet y verifica que aparece la fila "PRUEBA DE CONEXION".\n' +
-      'Si aparece = todo funciona perfectamente.'
-    );
-  } catch(e) {
-    // Safari/iOS lanza "Load failed" con no-cors aunque los datos lleguen
-    const esCorsNormal = e.message && (
-      e.message.includes('Load failed') ||
-      e.message.includes('Failed to fetch') ||
-      e.message.includes('NetworkError') ||
-      e.message.includes('CORS')
-    );
-    if (esCorsNormal) {
-      // Tratar como éxito — comportamiento normal de Safari con no-cors
-      mostrarResultado('success',
-        '✓ Solicitud enviada correctamente.\n\n' +
-        'Abre tu Google Sheet y verifica que aparece la fila "PRUEBA DE CONEXION".\n' +
-        'Si aparece = todo funciona perfectamente.'
-      );
-    } else {
-      mostrarResultado('error',
-        'Error de conexión: ' + e.message + '\n\n' +
-        'Verifica que tengas conexión a internet y que la URL sea correcta.'
-      );
-    }
-  }
-}
 
 function mostrarResultado(tipo, msg) {
   const el = document.getElementById('testResult');
