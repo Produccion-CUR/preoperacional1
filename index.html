@@ -7,7 +7,29 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="theme-color" content="#0e2044"/>
 <title>Pre-operacional · Comfrut</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+// Cargar jsPDF con múltiples CDN de respaldo
+(function(){
+  var cdns = [
+    'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+    'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
+    'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js'
+  ];
+  var idx = 0;
+  function loadNext(){
+    if(idx >= cdns.length){ 
+      console.error('jsPDF no pudo cargar desde ningún CDN');
+      window._jspdfFailed = true;
+      return;
+    }
+    var s = document.createElement('script');
+    s.src = cdns[idx++];
+    s.onerror = loadNext;
+    document.head.appendChild(s);
+  }
+  loadNext();
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -507,10 +529,25 @@ body{font-family:var(--body);background:#f0f5fb;color:var(--ink);min-height:100v
         <div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:2px;font-family:var(--mono)">CF/CR-ASC-017-RG001 · v08</div>
       </div>
     </div>
-    <div class="hero-desc">Selecciona el turno y los esquemas a inspeccionar para iniciar el registro del turno.</div>
+    <div class="hero-desc">Selecciona la sala, turno y los esquemas a inspeccionar.</div>
+
+    <!-- SALA -->
+    <div class="sel-label"><span class="sel-label-num">1</span>Sala de proceso</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px" id="salaGrid">
+      <div class="turno-card" data-sala="seleccion" onclick="selSala(this)" style="padding:16px 8px">
+        <div class="turno-icon">🔵</div>
+        <div class="turno-name">Selección</div>
+        <div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:3px;font-family:var(--mono)">RG001 v09</div>
+      </div>
+      <div class="turno-card" data-sala="envasado" onclick="selSala(this)" style="padding:16px 8px">
+        <div class="turno-icon">📦</div>
+        <div class="turno-name">Envasado</div>
+        <div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:3px;font-family:var(--mono)">RG002 v06</div>
+      </div>
+    </div>
 
     <!-- TURNO -->
-    <div class="sel-label"><span class="sel-label-num">1</span>Selecciona el turno</div>
+    <div class="sel-label"><span class="sel-label-num">2</span>Selecciona el turno</div>
     <div class="turno-grid">
       <div class="turno-card" data-t="Dia" onclick="selTurno(this)">
         <div class="turno-icon">☀️</div>
@@ -530,25 +567,8 @@ body{font-family:var(--body);background:#f0f5fb;color:var(--ink);min-height:100v
     </div>
 
     <!-- ESQUEMAS -->
-    <div class="sel-label"><span class="sel-label-num">2</span>Selecciona los esquemas</div>
-    <div class="scheme-grid">
-      <div class="scheme-card" data-s="s1" onclick="selEsq(this)">
-        <div class="scheme-chk" id="chk-s1"></div>
-        <div class="scheme-info"><div class="scheme-name">Túnel Continuo</div><div class="scheme-cnt">Esquema 1 · 21 ítems</div></div>
-      </div>
-      <div class="scheme-card" data-s="s2" onclick="selEsq(this)">
-        <div class="scheme-chk" id="chk-s2"></div>
-        <div class="scheme-info"><div class="scheme-name">Esquema 3</div><div class="scheme-cnt">14 ítems</div></div>
-      </div>
-      <div class="scheme-card" data-s="s3" onclick="selEsq(this)">
-        <div class="scheme-chk" id="chk-s3"></div>
-        <div class="scheme-info"><div class="scheme-name">Tomra</div><div class="scheme-cnt">Esquema 4 · 11 ítems</div></div>
-      </div>
-      <div class="scheme-card" data-s="s4" onclick="selEsq(this)">
-        <div class="scheme-chk" id="chk-s4"></div>
-        <div class="scheme-info"><div class="scheme-name">Sala Proceso</div><div class="scheme-cnt">15 ítems</div></div>
-      </div>
-    </div>
+    <div class="sel-label"><span class="sel-label-num">3</span>Selecciona los esquemas</div>
+    <div class="scheme-grid" id="schemeGrid"></div>
 
     <div class="home-stats">
       <div class="h-stat"><div class="h-stat-v" id="hsTurno">—</div><div class="h-stat-l">Último turno</div></div>
@@ -575,14 +595,13 @@ body{font-family:var(--body);background:#f0f5fb;color:var(--ink);min-height:100v
   </div>
   <div class="form-pad">
     <div class="field"><div class="fl">Supervisor <span class="req">*</span></div>
-      <select id="f_sup" style="width:100%;padding:14px 14px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:var(--body);font-size:16px;color:var(--ink);-webkit-appearance:none;appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%235a7eb4%22 stroke-width=%222.5%22%3E%3Cpath d=%22m6 9 6 6 6-6%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 13px center;padding-right:38px">
+      <select id="f_sup" style="width:100%;padding:14px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:var(--body);font-size:16px;color:var(--ink);-webkit-appearance:none;appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%235a7eb4%22 stroke-width=%222.5%22%3E%3Cpath d=%22m6 9 6 6 6-6%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 13px center;padding-right:38px">
         <option value="">— Selecciona el supervisor —</option>
         <option value="Victor Cedeño">Victor Cedeño</option>
         <option value="Maximiliano Vergara">Maximiliano Vergara</option>
         <option value="Praxedes Sanchez">Praxedes Sanchez</option>
         <option value="Sergio Chavez">Sergio Chavez</option>
-      </select>
-    </div>
+      </select></div>
     <div class="fr2">
       <div class="field"><div class="fl">Fecha <span class="req">*</span></div>
         <input type="date" id="f_fecha"/></div>
@@ -837,17 +856,56 @@ body{font-family:var(--body);background:#f0f5fb;color:var(--ink);min-height:100v
 <script>
 // ─── DATA ───────────────────────────────────────────────────
 const SECS = {
-  s1:{label:'Túnel Continuo (Esquema 1)',sub:'Esquema 1 · 21 ítems',color:'#3b9eff',
-      items:['Air clean','Despiedrador','Despalillador','Tina lavada de fruta','Secadoras','BBC (selector de fruta)','Tomra neón','Aspersores','Cinta descarte','Imán N°1','Elevador 1','Zaranda ingreso túnel','Cinta túnel','Cinta salida de túnel','Bühler','Elevador 2','Elevador 3','Cinta madre','Tolvas de descarga','Balanzas dinámicas','Vidrios y plásticos duros']},
-  s2:{label:'Esquema 3',sub:'14 ítems',color:'#00c695',
-      items:['Cinta metálica','Air clean','Elevador 1','Zaranda','Bühler','Aspersores','Cinta descarte','Elevador 2','Cinta de inspección','Imán N°2','Lavado de fruta','Vidrios y plásticos duros','Tolvas de descarga','Balanzas']},
-  s3:{label:'Tomra (Esquema 4)',sub:'Esquema 4 · 11 ítems',color:'#ffb020',
-      items:['Cinta de inspección','Elevador','Zaranda','Línea Desechos','Selecionadora Tomra','Línea Descarte','Elevadores','Aspersores','Cinta madre','Tolva de descarga','Vidrio y plástico duro']},
-  s4:{label:'Sala Proceso',sub:'15 ítems',color:'#a855f7',
-      items:['Motores de maquinarias','Mesas','Plataformas','Balanzas','Vidrios y plásticos duros','Equipos libres de condensación','Pisos','Cielos','Luminarias','Paredes','Zocalos','Puertas','Basureros','Lavado de mano','Bandejas en buen estado y orden correcto']}
+  s1:{label:'Túnel Continuo (Esquema 1)',items:['Air clean','Despiedrador','Despalillador','Tina lavada de fruta','Secadoras','BBC (selector de fruta)','Tomra neón','Aspersores','Urschel (Frutilla)','Cinta descarte','Imán N°1','Elevador 1','Zaranda ingreso túnel','Cinta túnel','Cinta salida de túnel','Bühler','Elevador 2','Elevador 3','Cinta madre','Tolvas de descarga','Balanzas dinámicas','Vidrios y plásticos duros','Fijaciones, tuercas pernos']},
+  s2:{label:'Esquema 3',items:['Cinta metálica','Air clean','Elevador 1','Zaranda','Bühler','Aspersores','Cinta descarte','Elevador 2','Cinta de inspección','Imán N°2','Lavado de fruta','Vidrios y plásticos duros','Tolvas de descarga','Balanzas','Fijaciones, tuercas pernos']},
+  s3:{label:'Tomra (Esquema 4)',items:['Cinta de inspección','Elevador','Zaranda','Línea Desechos','Selecionadora Tomra','Línea Descarte','Elevadores','Aspersores','Cinta madre','Tolva de descarga','Vidrio y plástico duro','Fijaciones, tuercas pernos']},
+  s4:{label:'Sala Proceso',items:['Motores de maquinarias','Mesas','Plataformas','Balanzas','Vidrios y plásticos duro','Equipos libres de condensación','Pisos','Cielos','Luminarias','Paredes','Zocalos','Puertas','Basureros','Lavado de mano','Bandejas utilizadas en buen estado y en orden correcto.','Fijaciones, tuercas pernos']},
+  e1:{label:'Envasadora N° 1',items:['Tolvas alimentación','Elevadores','Cono alimentación','Vibradores','Dosificadores superiores','Dosificadores intermedios','Dosificadores inferiores','Cono de llenado','Chute de descarga','Pinzas','Ventosas','Selladora (cajas y bolsas)','Cintas / uniones','Selladora manual','Detector de metal','Chequeador de peso','Equipos móviles','Vidrios y plásticos duro','Fijaciones, tuercas, pernos','Motores sin filtración','Los materiales presentes en la sala corresponden al SKU a procesar.']},
+  e2:{label:'Esquema 5',items:['Zaranda','Air clean','Lavado de fruta','Cintas madre','Cintas de inspección','Imán N°5','Vidrio y plástico duro','Motores sin filtración','Fijaciones, tuercas pernos']},
+  e3:{label:'Sala Proceso Envasado',items:['Cielos','Luminarias','Paredes','Zócalos','Puertas','Basureros','Mesas y carrileras','Plataformas','Lavado de mano','Dispensadores','Uso correcto de bandejas']}
 };
 
 // ─── STATE ──────────────────────────────────────────────────
+// ─── SELECTOR DE SALA ─────────────────────────────────────────
+let salaSel = '';
+
+const SALAS = {
+  seleccion: [
+    {id:'s1',name:'Túnel Continuo',sub:'Esquema 1 · 23 ítems'},
+    {id:'s2',name:'Esquema 3',sub:'15 ítems'},
+    {id:'s3',name:'Tomra',sub:'Esquema 4 · 12 ítems'},
+    {id:'s4',name:'Sala Proceso',sub:'16 ítems'}
+  ],
+  envasado: [
+    {id:'e1',name:'Envasadora N° 1',sub:'21 ítems'},
+    {id:'e2',name:'Esquema 5',sub:'9 ítems'},
+    {id:'e3',name:'Sala Proceso',sub:'11 ítems'}
+  ]
+};
+
+function selSala(card) {
+  document.querySelectorAll('#salaGrid .turno-card').forEach(c=>c.classList.remove('sel'));
+  card.classList.add('sel');
+  salaSel = card.dataset.sala;
+  selEsqs = [];
+  renderSchemes(salaSel);
+  checkStartReady();
+}
+
+function renderSchemes(sala) {
+  const grid = document.getElementById('schemeGrid');
+  if(!grid) return;
+  const schemes = SALAS[sala] || [];
+  grid.innerHTML = schemes.map(s=>`
+    <div class="scheme-card" data-s="${s.id}" onclick="selEsq(this)">
+      <div class="scheme-chk" id="chk-${s.id}"></div>
+      <div class="scheme-info">
+        <div class="scheme-name">${s.name}</div>
+        <div class="scheme-cnt">${s.sub}</div>
+      </div>
+    </div>`).join('');
+}
+
 let selTurnoVal = '';
 let selEsqs     = [];
 let queue       = [];
@@ -873,6 +931,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // ─── HOME: TURNO ────────────────────────────────────────────
 function selTurno(card) {
   document.querySelectorAll('.turno-card').forEach(c => c.classList.remove('sel'));
+  document.querySelectorAll('#salaGrid .turno-card').forEach(c=>c.classList.remove('sel'));
+  const _sg=document.getElementById('schemeGrid');if(_sg)_sg.innerHTML='';
   card.classList.add('sel');
   selTurnoVal = card.dataset.t;
   checkStartReady();
@@ -894,11 +954,13 @@ function selEsq(card) {
 
 function checkStartReady() {
   const btn = document.getElementById('btnStart');
-  const ok  = selTurnoVal && selEsqs.length > 0;
+  const ok  = salaSel && selTurnoVal && selEsqs.length > 0;
   btn.disabled = !ok;
   if (ok) {
-    const esqNames = selEsqs.map(s => SECS[s].label.split(' ')[0]).join(' + ');
+    const esqNames = selEsqs.map(s=>SECS[s]?SECS[s].label.split(' ')[0]:s).join(' + ');
     btn.textContent = `▶ Iniciar — ${selTurnoVal} · ${esqNames}`;
+  } else if (!salaSel) {
+    btn.textContent = 'Selecciona la sala primero';
   } else if (!selTurnoVal) {
     btn.textContent = 'Selecciona el turno';
   } else {
@@ -909,10 +971,10 @@ function checkStartReady() {
 // ─── INICIAR ─────────────────────────────────────────────────
 function iniciar() {
   if (!selTurnoVal || !selEsqs.length) return;
-  queue = ['s1','s2','s3','s4'].filter(s => selEsqs.includes(s));
+  queue = (salaSel==='envasado'?['e1','e2','e3']:['s1','s2','s3','s4']).filter(s => selEsqs.includes(s));
+  _autoGuardado = false; // reset para nueva inspección
   qIdx  = 0;
   estado = {};
-  _autoGuardado = false; // reset para nueva inspección
   // Fill read-only fields
   document.getElementById('f_turno_ro').value = selTurnoVal;
   document.getElementById('f_esq_ro').value   = queue.map(s => SECS[s].label).join(' + ');
@@ -933,12 +995,7 @@ function goTo(name) {
   updateNav(name);
   updateProg(name);
   if (name==='check')   buildChecklist();
-  if (name==='resumen') {
-    buildResumen();
-    setTimeout(initFirma, 80);
-    // Guardar automáticamente en Sheets y generar PDF al llegar al resumen
-    setTimeout(autoGuardar, 600);
-  }
+  if (name==='resumen') { buildResumen(); setTimeout(initFirma, 80); setTimeout(autoGuardar, 600); }
   if (name==='hist')    renderHist();
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1149,49 +1206,38 @@ function getRec() {
   const nc=[];
   queue.forEach(sid=>SECS[sid].items.forEach((item,idx)=>{
     const v=estado[`${sid}_${idx}`];
-    // NUNCA incluir foto — solo texto para Sheets
-    if(v&&v.val==='NC')nc.push({
-      sec:    SECS[sid].label,
-      item:   item,
-      obs:    v.obs||'',
-      accion: v.accion||'',
-      photo:  ''   // siempre vacío en getRec
-    });
+    if(v&&v.val==='NC')nc.push({sec:SECS[sid].label,item,obs:v.obs||'',accion:v.accion||'',photo:''});
   }));
   const supEl  = document.getElementById('f_sup');
   const fechaEl= document.getElementById('f_fecha');
   const horaEl = document.getElementById('f_hora');
   const skuEl  = document.getElementById('f_sku');
-
-  // estado SIN fotos
-  const itemsSinFotos = {};
-  Object.keys(estado).forEach(k => {
-    const v = estado[k];
-    itemsSinFotos[k] = {val:v.val||'', obs:v.obs||'', accion:v.accion||'', photo:''};
+  const itemsSinFotos={};
+  Object.keys(estado).forEach(k=>{
+    const v=estado[k];
+    itemsSinFotos[k]={val:v.val||'',obs:v.obs||'',accion:v.accion||'',photo:''};
   });
-
   return {
     id:              Date.now(),
     supervisor:      supEl   ? supEl.value   : '',
     fecha:           fechaEl ? fechaEl.value : '',
     hora:            horaEl  ? horaEl.value  : '',
     turno:           selTurnoVal,
-    esquema:         queue.map(s=>SECS[s].label).join(' + '),
+    esquema:         queue.map(s=>SECS[s]?SECS[s].label:'').join(' + '),
     sku:             skuEl   ? skuEl.value   : '',
+    sala:            salaSel || '',
     analista:        '',
-    firma:           '',       // nunca incluir firma (base64)
+    firma:           '',
     obs:             '',
     accionInmediata: '',
     schemes:         [...queue],
     items:           itemsSinFotos,
-    nc               // nc sin fotos
+    nc
   };
 }
 
-// getRec con fotos — solo para generar el PDF
 function getRecConFotos() {
   const rec = getRec();
-  // Restaurar fotos del estado original
   rec.items = {...estado};
   rec.nc = [];
   queue.forEach(sid=>SECS[sid].items.forEach((item,idx)=>{
@@ -1348,62 +1394,67 @@ function resumenWA() {
   abrirWAPicker(msg, 'Resumen del turno', 'Elige a quién enviar el resumen');
 }
 
+
 // ─── AUTO GUARDADO AL LLEGAR AL RESUMEN ──────────────────────────
 let _autoGuardado = false;
 
 async function autoGuardar() {
   if (_autoGuardado) return;
   _autoGuardado = true;
+  const rec = getRec();
+  _rec = rec;
+  const cfg = getCfg();
+  saveLocal(rec);
+  refreshStats();
+  if (cfg.paUrl) enviarAExcel(cfg.paUrl, rec);
+}
+
+// ─── GUARDAR + PDF ─────────────────────────────────────────────
+async function guardarYPDF() {
+  // Verificar jsPDF correctamente
+  const jspdfLib = window.jspdf || (window.jspdf = window.jsPDF ? {jsPDF: window.jsPDF} : null);
+  if (!jspdfLib) {
+    toast('Cargando librería PDF... toca de nuevo en 5 segundos');
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+    s.onload = () => toast('Listo, toca de nuevo para generar el PDF');
+    document.head.appendChild(s);
+    return;
+  }
 
   const rec = getRec();
   _rec = rec;
   const cfg = getCfg();
 
-  // Guardar local
+  // 1. Guardar local
   saveLocal(rec);
   refreshStats();
 
-  // Enviar a Google Sheets en segundo plano
-  if (cfg.paUrl) {
-    enviarAExcel(cfg.paUrl, rec);
-  }
-}
-
-
-async function guardarYPDF() {
-  const cfg = getCfg();
-  const rec = getRec();
-  _rec = getRecConFotos();
-
-  // ── 1. Guardar local siempre
-  saveLocal(rec);
-  refreshStats();
-
-  // ── 2. Enviar a Sheets (sin esperar)
-  if (cfg.paUrl) {
-    enviarAExcel(cfg.paUrl, rec);
-  } else {
-    toast('Configura Google Sheets en ⚙');
-  }
-
-  // ── 3. Generar PDF (independiente de Sheets)
-  if (!window.jspdf && !window.jsPDF) {
-    toast('Registro guardado. PDF: recarga la app e intenta de nuevo.');
-    return;
-  }
-
+  // 2. Generar PDF
   showSpin('Generando PDF...');
-  await sleep(200);
+  await sleep(150);
   try {
-    _pdf = generarPDF(_rec);
-    hideSpin();
-    pdfDescargaDirecta();
+    _pdf = generarPDF(rec);
   } catch(e) {
     hideSpin();
-    toast('Error en PDF: ' + e.message);
+    toast('Error generando PDF: ' + e.message);
+    console.error(e);
+    return;
+  }
+  hideSpin();
+
+  // 3. Mostrar PDF
+  pdfDescargaDirecta();
+
+  // 4. Guardar en Google Sheets automáticamente
+  if (cfg.paUrl) {
+    toast('Guardando en Google Sheets...');
+    enviarAExcel(cfg.paUrl, rec);
+  } else {
+    toast('Configura Google Sheets en ⚙ Config');
   }
 
-  // ── 4. Alerta NC
+  // 5. Alerta NC
   const contactos = cfg.contactos || [];
   if (rec.nc.length > 0 && contactos.length > 0) {
     setTimeout(() => {
@@ -1417,9 +1468,6 @@ async function guardarYPDF() {
     }, 1200);
   }
 }
-
-
-
 
 // Envío a Excel via Power Automate — con reintentos automáticos
 async function enviarAExcel(url, rec, intento=1) {
@@ -1487,15 +1535,21 @@ async function sincronizarPendientes() {
 }
 
 async function soloPDF() {
-  if (!window.jspdf && !window.jsPDF) {
-    toast('Cargando... toca de nuevo en 3 segundos');
+  const jspdfLib = window.jspdf || (window.jspdf = window.jsPDF ? {jsPDF: window.jsPDF} : null);
+  if (!jspdfLib) {
+    toast('Cargando librería PDF... toca de nuevo en 5 segundos');
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+    s.onload = () => toast('Listo, toca de nuevo para generar el PDF');
+    document.head.appendChild(s);
     return;
   }
-  _rec = getRecConFotos(); // con fotos para el PDF
+  const rec = getRec();
+  _rec = rec;
   showSpin('Generando PDF...');
   await sleep(150);
   try {
-    _pdf = generarPDF(_rec);
+    _pdf = generarPDF(rec);
   } catch(e) {
     hideSpin();
     toast('Error generando PDF: ' + e.message);
@@ -1638,8 +1692,7 @@ function mostrarResultado(tipo, msg) {
 // ─── PDF: DOWNLOAD DIRECT ─────────────────────────────────────
 function pdfDescargaDirecta() {
   if(!_pdf||!_rec)return;
-  const schemeShort = (_rec.schemes||[]).map(s=>({s1:'Tunel',s2:'Esq3',s3:'Tomra',s4:'Sala'}[s]||s)).join('-');
-  const fname=`PreOperacional_${_rec.fecha||'hoy'}_${(_rec.turno||'T').replace(/\s/g,'')}_${schemeShort||'Esq'}_${(_rec.sku||'SKU').replace(/[^a-zA-Z0-9]/g,'-')}.pdf`;
+  const fname=`PreOperacional_${_rec.fecha||'hoy'}_${(_rec.turno||'T').replace(/\s/g,'')}_${(_rec.sku||'SKU').replace(/[^a-zA-Z0-9]/g,'-')}.pdf`;
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const isAndroid = /Android/.test(navigator.userAgent);
 
@@ -1711,22 +1764,22 @@ function pdfMail(){
   toast('📧 Abriendo correo — adjunta el PDF');
 }
 function pdfWA() {
-  if (_pdf && _rec) pdfDescargar();
+  // WhatsApp no permite recibir archivos desde web directamente.
+  // Flujo correcto: descargar PDF → abrir WA → adjuntar desde galería.
+  if (_pdf && _rec) pdfDescargar(); // primero descarga el PDF
   const r = _rec || {};
-  const schemeShort = (r.schemes||[]).map(s=>({s1:'Tunel',s2:'Esq3',s3:'Tomra',s4:'Sala'}[s]||s)).join('-');
-  const fname = `PreOperacional_${r.fecha||'hoy'}_${(r.turno||'T').replace(/\s/g,'')}_${schemeShort||'Esq'}_${(r.sku||'SKU').replace(/[^a-zA-Z0-9]/g,'-')}.pdf`;
   const nc = r.nc && r.nc.length > 0
     ? `\n*NC (${r.nc.length}):*\n` + r.nc.map(n => `- ${n.item}${n.obs ? ': ' + n.obs : ''}`).join('\n')
     : '\nSin No Conformidades';
   const msg = encodeURIComponent(
     `*Pre-operacional Seleccion | Comfrut*\n` +
     `Fecha: ${fmtF(r.fecha||'')} - ${r.hora||''} - ${r.turno||''}\n` +
-    `Esquema: ${r.esquema||''}\n` +
-    `SKU: ${r.sku||''}\n` +
+    `SKU: ${r.sku||''} - ${r.esquema||''}\n` +
     `Supervisor: ${r.supervisor||''}` +
     nc +
-    `\n\n*Nombre del PDF:* ${fname}\n` +
-    `Adjuntalo desde tu carpeta Descargas.\n\n` +
+    (r.obs ? `\nObs: ${r.obs}` : '') +
+    `\n\n*PDF:* El archivo se descargo automaticamente.` +
+    `\nAdjuntalo desde tu carpeta Descargas antes de enviar.\n\n` +
     `_CF/CR-ASC-017-RG001 v08_`
   );
   setTimeout(() => abrirWAPicker(msg, 'Compartir registro', 'Elige a quién enviar el resumen'), 800);
@@ -1858,7 +1911,8 @@ function updCfgStatus(cfg){const d=document.getElementById('sDot'),t=document.ge
 
 // ─── PDF ENGINE ────────────────────────────────────────────────
 function generarPDF(rec){
-  const {jsPDF} = window.jspdf || {jsPDF: window.jsPDF} || {};
+  // Obtener jsPDF de cualquier forma que haya cargado
+  const {jsPDF} = window.jspdf || {jsPDF: window.jsPDF};
   const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
   const ML=10,MT=10,CW=190,PH=297;
   const INK=[10,22,40],BLUE=[26,86,118],MID=[91,141,184],LBLUE=[200,223,240];
@@ -2184,9 +2238,10 @@ function resetSKU() {
 
 function nuevaLinea() {
   // Resetear selecciones de turno y esquema
-  turnoSel = ''; selEsqs = []; queue = []; qIdx = 0; estado = {};
-  _autoGuardado = false;
+  turnoSel = ''; selEsqs = []; queue = []; qIdx = 0; estado = {}; salaSel = '';
   document.querySelectorAll('.turno-card').forEach(c => c.classList.remove('sel'));
+  document.querySelectorAll('#salaGrid .turno-card').forEach(c=>c.classList.remove('sel'));
+  const _sg=document.getElementById('schemeGrid');if(_sg)_sg.innerHTML='';
   document.querySelectorAll('.scheme-card').forEach(c => {
     c.classList.remove('sel');
     const chk = c.querySelector('.scheme-chk');
