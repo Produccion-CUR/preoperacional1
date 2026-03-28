@@ -1386,36 +1386,90 @@ function alertaNC() {
   abrirWAPicker(enc, 'Alerta NC — ' + rec.nc.length + ' no conformidad' + (rec.nc.length>1?'es':''), 'Elige a quién enviar la alerta');
 }
 function buildNCMsg(rec) {
-  // Sin emojis para compatibilidad universal con WhatsApp
+  const docCode = salaSel==='envasado' ? 'CF/CR-ASC-017-RG002 v06' : 'CF/CR-ASC-017-RG001 v09';
+  const sala    = salaSel==='envasado' ? 'Envasado' : 'Selección';
+  const schemeNames = {
+    s1:'Túnel Continuo', s2:'Esquema 3', s3:'Tomra', s4:'Sala Proceso Selección',
+    e1:'Envasadora N°1', e2:'Esquema 5', e3:'Sala Proceso Envasado'
+  };
+
+  // Agrupar NC por esquema
+  const ncPorEsquema = {};
+  rec.nc.forEach(n => {
+    const esq = n.sec || 'Sin esquema';
+    if (!ncPorEsquema[esq]) ncPorEsquema[esq] = [];
+    ncPorEsquema[esq].push(n);
+  });
+
+  let ncBlocks = '';
+  Object.entries(ncPorEsquema).forEach(([esq, ncs]) => {
+    ncBlocks += `\n*[ ${esq} ]*\n`;
+    ncs.forEach(n => {
+      ncBlocks += `  - *${n.item}*`;
+      if (n.obs)    ncBlocks += `\n    Obs: ${n.obs}`;
+      if (n.accion) ncBlocks += `\n    Accion: ${n.accion}`;
+      if (n.photo)  ncBlocks += `\n    (foto en PDF)`;
+      ncBlocks += '\n';
+    });
+  });
+
+  const skuLine = rec.sku ? `*SKU:* ${rec.sku}\n` : '';
+
   return `*!! ALERTA DE NO CONFORMIDAD !!*\n` +
-    `*Pre-operacional Seleccion - Comfrut*\n\n` +
+    `*Pre-operacional ${sala} - Comfrut*\n\n` +
     `*Fecha:* ${fmtF(rec.fecha)}\n` +
     `*Hora:* ${rec.hora} - *${rec.turno}*\n` +
-    `*SKU:* ${rec.sku}\n` +
-    `*Esquema:* ${rec.esquema}\n` +
-    `*Supervisor:* ${rec.supervisor}\n\n` +
+    skuLine +
+    `*Supervisor:* ${rec.supervisor}\n` +
+    `*Esquemas:* ${rec.schemes ? rec.schemes.map(s=>schemeNames[s]||s).join(', ') : rec.esquema}\n\n` +
     `*${rec.nc.length} No Conformidad${rec.nc.length>1?'es':''}:*\n` +
-    rec.nc.map(n => `  - *${n.item}*${n.obs ? '\n    Obs: ' + n.obs : ''}${n.photo ? '\n    (foto en PDF adjunto)' : ''}`).join('\n') +
-    `\n\n*Accion requerida:* Gestionar correccion inmediata.` +
-    `${rec.obs ? '\nObs: _' + rec.obs + '_' : ''}\n\n` +
-    `_CF/CR-ASC-017-RG001 v08_`;
+    ncBlocks +
+    `\n*Accion requerida:* Gestionar correccion inmediata.\n\n` +
+    `_${docCode}_`;
 }
 
 function resumenWA() {
   const rec = getRec();
-  const nc = rec.nc.length > 0
-    ? `\n*NC (${rec.nc.length}):*\n` + rec.nc.map(n => `- ${n.item}${n.obs ? ': ' + n.obs : ''}`).join('\n')
-    : '\nSin No Conformidades';
-  const msg = encodeURIComponent(
-    `*Pre-operacional Seleccion | Comfrut*\n` +
-    `Fecha: ${fmtF(rec.fecha)} - ${rec.hora} - ${rec.turno}\n` +
-    `SKU: ${rec.sku} - ${rec.esquema}\n` +
-    `Supervisor: ${rec.supervisor}` +
-    nc +
-    (rec.obs ? `\nObs: ${rec.obs}` : '') +
-    `\n\n_CF/CR-ASC-017-RG001 v08_`
-  );
-  abrirWAPicker(msg, 'Resumen del turno', 'Elige a quién enviar el resumen');
+  const docCode = salaSel==='envasado' ? 'CF/CR-ASC-017-RG002 v06' : 'CF/CR-ASC-017-RG001 v09';
+  const sala    = salaSel==='envasado' ? 'Envasado' : 'Selección';
+  const schemeNames = {
+    s1:'Túnel Continuo', s2:'Esquema 3', s3:'Tomra', s4:'Sala Proceso Selección',
+    e1:'Envasadora N°1', e2:'Esquema 5', e3:'Sala Proceso Envasado'
+  };
+
+  // Encabezado
+  let txt = `*Pre-operacional ${sala} | Comfrut*\n`;
+  txt += `Fecha: ${fmtF(rec.fecha)} | ${rec.hora} | ${rec.turno}\n`;
+  if (rec.sku) txt += `SKU: ${rec.sku}\n`;
+  txt += `Supervisor: ${rec.supervisor}\n`;
+  txt += `Esquemas: ${rec.schemes ? rec.schemes.map(s=>schemeNames[s]||s).join(', ') : rec.esquema}\n`;
+
+  if (rec.nc.length === 0) {
+    txt += `\nSin No Conformidades`;
+  } else {
+    // Agrupar NC por esquema
+    const ncPorEsquema = {};
+    rec.nc.forEach(n => {
+      const esq = n.sec || 'Sin esquema';
+      if (!ncPorEsquema[esq]) ncPorEsquema[esq] = [];
+      ncPorEsquema[esq].push(n);
+    });
+
+    txt += `\n*NC (${rec.nc.length}):*`;
+    Object.entries(ncPorEsquema).forEach(([esq, ncs]) => {
+      txt += `\n\n_${esq}_\n`;
+      ncs.forEach(n => {
+        txt += `- ${n.item}`;
+        if (n.obs)    txt += `: ${n.obs}`;
+        if (n.accion) txt += ` → ${n.accion}`;
+        txt += '\n';
+      });
+    });
+  }
+
+  txt += `\n_${docCode}_`;
+
+  abrirWAPicker(encodeURIComponent(txt), 'Resumen del turno', 'Elige a quién enviar el resumen');
 }
 
 
