@@ -2056,12 +2056,15 @@ function generarPDF(rec){
       s1:'Túnel Continuo',
       s2:'Esquema 3',
       s3:'Tomra Esq.4',
-      s4:'Sala Proceso Selección'
+      s4:'Sala Proceso Selección',
+      e1:'Envasadora N° 1',
+      e2:'Esquema 5',
+      e3:'Sala Proceso Envasado'
     };
     const selectedNames = (r.schemes||[]).map(s=>schemeNameMap[s]||s).filter(Boolean);
     selectedNames.forEach((name,i)=>{
-      sf('bold',7.5,DGREY);
-      doc.text(name, ML+NW/2+3, y+9.5+i*3.8);
+      sf('bold',selectedNames.length>3?6.5:7.5,DGREY);
+      doc.text(name, ML+NW/2+3, y+9.5+i*(selectedNames.length>3?3.4:3.8));
     });
 
     ln(ML+NW/2,y+6,ML+NW/2,y+H,[180,195,210],.2);
@@ -2086,7 +2089,16 @@ function generarPDF(rec){
     return y+H+2;
   }
 
-  const CX=[ML,ML+72,ML+90,ML+148,ML+168],CW2=[72,18,58,20,CW-72-18-58-20];
+  const CW2=[62,16,46,48,18];
+  const CX=[ML,ML+62,ML+78,ML+124,ML+172];
+  function rowH(item,val,obs,accion){
+    sf('normal',6.5,DGREY);
+    const nI=doc.splitTextToSize(item||'',CW2[0]-4).length;
+    sf('normal',5,DGREY);
+    const nO=(obs&&val==='NC')?doc.splitTextToSize(obs,CW2[2]-3).length:1;
+    const nA=(accion&&val==='NC')?doc.splitTextToSize(accion,CW2[3]-3).length:1;
+    return Math.max(6,2.2+nI*2.8,2.2+nO*2.2,2.2+nA*2.2);
+  }
   function colHdr(y){
     const H=9;
     [['IMPLEMENTOS A REVISAR\nImplements to check',0],['C/NC/NA',1],['OBSERVACIÓN\nComments',2],['ACCIÓN CORRECTIVA\nCorrective actions',3],['C/NC/NA',4]].forEach(([t,i])=>{
@@ -2118,15 +2130,15 @@ function generarPDF(rec){
   }
 
   function itemRow(y,item,val,obs,accion,ri){
-    const H=6,bg=ri%2===0?WHITE:LGREY;
+    const H=rowH(item,val,obs,accion),bg=ri%2===0?WHITE:LGREY;
     fr(ML,y,CW,H,bg);ln(ML,y+H,ML+CW,y+H,[210,220,228],.15);
     CX.slice(1).forEach(x=>ln(x,y,x,y+H,[210,220,228],.15));
     // Col 1 — Nombre del ítem
-    sf('normal',6.5,DGREY);doc.text(doc.splitTextToSize(item,CW2[0]-4),ML+2.5,y+4.2);
+    sf('normal',6.5,DGREY);doc.text(doc.splitTextToSize(item,CW2[0]-4),ML+2.5,H>6?y+3.6:y+4.2);
     // Col 2 — C/NC/NA (rellena con valor de la app)
     if(val){
       const tc=val==='C'?OK:val==='NC'?NC_C:NA_C,bg2=val==='C'?OK_BG:val==='NC'?NC_BG:NA_BG;
-      fr(CX[1]+1.5,y+1,CW2[1]-3,H-2,bg2);sf('bold',7,tc);doc.text(val,CX[1]+CW2[1]/2,y+4.2,{align:'center'});
+      fr(CX[1]+1.5,y+1,CW2[1]-3,H-2,bg2);sf('bold',7,tc);doc.text(val,CX[1]+CW2[1]/2,y+H/2+1.2,{align:'center'});
     }
     // Col 3 — Observación (solo si NC)
     if(obs&&val==='NC'){sf('normal',5,[170,45,35]);doc.text(doc.splitTextToSize(obs,CW2[2]-3),CX[2]+2,y+4);}
@@ -2183,43 +2195,65 @@ function generarPDF(rec){
     });
   });
 
-  // Page 1
-  let y=hdr(1,2),ri=0,p2=0;
+  // Paginación dinámica
+  const TOT = (typeof doc.putTotalPages==='function') ? '{total}' : 2;
+  const LIM = PH-18;
+  let pgN=1, ri=0;
+  let y=hdr(1,TOT);
   y=nomenRow(y,rec);y=colHdr(y);
+  const newPage=(withHdr)=>{docFooter(PH-16);doc.addPage();pgN++;y=hdr(pgN,TOT);if(withHdr){y=colHdr(y);}ri=0;};
   for(let i=0;i<entries.length;i++){
     const e=entries[i];
-    const need=e.type==='sec'?6.5:5.5+(e.photo?34:0);
-    if(y+need>PH-18){p2=i;break;}
+    const need=e.type==='sec' ? 6.5+14 : rowH(e.item,e.val,e.obs,e.accion||'')+((e.photo&&e.val==='NC')?34:0);
+    if(y+need>LIM) newPage(true);
     if(e.type==='sec') y=secHdr(y,e.title);
     else{ y=itemRow(y,e.item,e.val,e.obs,e.accion||'',ri++); if(e.photo&&e.val==='NC') y=photoRow(y,e.photo); }
-    if(i===entries.length-1)p2=entries.length;
   }
-  docFooter(PH-16);
 
-  // Page 2
-  doc.addPage();y=hdr(2,2);y=colHdr(y);ri=0;
-  for(let i=p2;i<entries.length;i++){
-    const e=entries[i];
-    if(y+(e.type==='sec'?6.5:5.5)>PH-95)break;
-    if(e.type==='sec') y=secHdr(y,e.title);
-    else{ y=itemRow(y,e.item,e.val,e.obs,e.accion||'',ri++); if(e.photo&&e.val==='NC'&&y+34<PH-95) y=photoRow(y,e.photo); }
-  }
-  y+=4;
-  ['Se debe realizar una inspección visual de todas las áreas y componentes mencionados, éstas deben encontrarse en óptimas condiciones.',
-   'Este registro debe ejecutarse al comienzo de cada turno y cada vez que se cambie el producto a procesar.',
-   'Inspeccionar minuciosamente vidrios y plásticos duros en cada área y componente.',
-   'Desviaciones: notificar de inmediato a jefes y supervisores de calidad, inocuidad, producción y mantención.'].forEach(t=>{
-    sf('normal',5.5,DGREY);const ls=doc.splitTextToSize('• '+t,CW-6);doc.text(ls,ML+3,y);y+=ls.length*3.5+1});
-  y+=3;
+  // Textos y tabla de no conformidades (según registro oficial)
+  const instr=['Se debe realizar una inspección visual de todas las áreas y componentes mencionados en este documento, éstas deben encontrarse en óptimas e íntegras condiciones, de lo contrario, serán registradas y notificadas de inmediato para ejecutar la acción correctiva.',
+   'Este registro debe ser ejecutado al comienzo de cada turno y cada vez que se cambie el producto a procesar.',
+   'Es importante inspeccionar de manera minuciosa los vidrios y plásticos duros presentes en cada área y componente.',
+   'En caso de desviación, ésta deberá ser notificada de manera inmediata a los jefes y supervisores de calidad, inocuidad producción y mantención, quienes se encargarán de gestionar las acciones correctivas correspondientes.'];
   const nw1=50,nw2=CW-nw1;
+  const ncRows=[
+    ['Quiebre de componente',[
+      'Se debe verificar que no falte algún trozo del componente, dar aviso inmediato y registrar la no conformidad en el documento.',
+      'En el caso de que el componente se haya encontrado en contacto directo con el producto, los supervisores deberán identificar el producto involucrado desde el último control y dejar los pallets en estado “On Hold” para su posterior revisión.',
+      'El área de mantenimiento deberá gestionar el arreglo, cambio y/o reposición del componente.'],true],
+    ['Desprendimiento de algún componente y/o trozos de él.',[
+      'Se debe identificar si tiene contacto directo con el producto, de no ser así, se deberá buscar dentro del área de proceso hasta encontrar, en caso de no encontrar, los supervisores deberán identificar el producto involucrado y dejar los pallets en estado “On Hold” para su posterior revisión.',
+      'El área de mantenimiento deberá gestionar el arreglo, cambio y/o reposición del componente.'],false],
+    ['Mal estado en áreas de proceso',[
+      'Se debe dar aviso inmediato y registrar en del documento.',
+      'Los jefes y supervisores deberán gestionar las mejoras para la no conformidad'],false]
+  ];
+  sf('normal',5.5,DGREY);
+  const instrLines=instr.map(t=>doc.splitTextToSize('• '+t,CW-6));
+  const instrH=instrLines.reduce((a,l)=>a+l.length*2.6+1,0);
+  sf('normal',5.8,DGREY);
+  const ncLayout=ncRows.map(([nc,ps,bul])=>{
+    const lines=[];ps.forEach(t=>doc.splitTextToSize((bul?'• ':'')+t,nw2-6).forEach(l=>lines.push(l)));
+    return {nc,lines,h:Math.max(11,lines.length*2.7+4)};
+  });
+  const BBH=instrH+3+5.5+ncLayout.reduce((a,r)=>a+r.h,0)+(rec.accionInmediata?20:0)+(rec.obs?18:0)+50;
+  if(y+BBH>PH-8) newPage(false);
+  y+=4;
+  instrLines.forEach(ls=>{sf('normal',5.5,DGREY);doc.text(ls,ML+3,y);y+=ls.length*2.6+1});
+  y+=3;
   fr(ML,y,nw1,5.5,INK);fr(ML+nw1,y,nw2,5.5,INK);
-  sf('bold',5.2,WHITE);doc.text('NO CONFORMIDAD',ML+nw1/2,y+3.8,{align:'center'});doc.text('ACCIÓN CORRECTIVA',ML+nw1+nw2/2,y+3.8,{align:'center'});
+  sf('bold',5.8,WHITE);doc.text('No conformidad',ML+nw1/2,y+3.8,{align:'center'});doc.text('Acción correctiva',ML+nw1+nw2/2,y+3.8,{align:'center'});
+  dr(ML,y,CW,5.5,INK,.4);ln(ML+nw1,y,ML+nw1,y+5.5,WHITE,.3);
   y+=5.5;
-  [['Quiebre de un componente.','Verificar que no falte ningún trozo. Aviso inmediato. Contacto con producto: pallets "On Hold". Mantención gestiona arreglo.'],
-   ['Desprendimiento de componente.','Identificar contacto con producto. Buscar en área. Sin encontrar: pallets "On Hold". Mantención gestiona.'],
-   ['Mal estado en área de proceso.','Aviso inmediato y registro. Supervisores gestionan mejoras.']].forEach(([nc,ac],i)=>{
-    const rh=11,bg=i%2===0?WHITE:LGREY;fr(ML,y,CW,rh,bg);dr(ML,y,CW,rh,[210,220,228],.1);ln(ML+nw1,y,ML+nw1,y+rh,[180,200,215],.1);
-    sf('bold',6,BLUE);doc.text(doc.splitTextToSize(nc,nw1-4),ML+2,y+3.8);sf('normal',5.5,DGREY);doc.text(doc.splitTextToSize(ac,nw2-4),ML+nw1+2,y+3.8);y+=rh});
+  ncLayout.forEach((r,i)=>{
+    fr(ML,y,CW,r.h,i%2===0?WHITE:LGREY);dr(ML,y,CW,r.h,INK,.3);ln(ML+nw1,y,ML+nw1,y+r.h,INK,.3);
+    sf('bold',6.5,INK);
+    const nl=doc.splitTextToSize(r.nc,nw1-6);
+    doc.text(nl,ML+nw1/2,y+r.h/2-(nl.length-1)*1.4+1,{align:'center'});
+    sf('normal',5.8,DGREY);
+    doc.text(r.lines,ML+nw1+3,y+3.8,{lineHeightFactor:1.15});
+    y+=r.h;
+  });
   // Acción Inmediata NC (si existe)
   if(rec.accionInmediata){
     y+=3;
@@ -2233,6 +2267,7 @@ function generarPDF(rec){
   // Observaciones generales
   if(rec.obs){y+=3;fr(ML,y,CW,5,INK);sf('bold',5.2,WHITE);doc.text('OBSERVACIONES GENERALES',ML+CW/2,y+3.6,{align:'center'});y+=5;fr(ML,y,CW,10,WHITE);dr(ML,y,CW,10,[200,215,225],.2);sf('normal',6.5,DGREY);doc.text(doc.splitTextToSize(rec.obs,CW-6),ML+3,y+4);y+=12}
   y+=3;y=drawSigs(y,rec);y+=3;docFooter(y);
+  if(typeof doc.putTotalPages==='function'){try{doc.putTotalPages('{total}')}catch(e){}}
   return doc;
 }
 
