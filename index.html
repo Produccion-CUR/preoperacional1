@@ -2062,10 +2062,15 @@ function generarPDF(rec){
       e3:'Sala Proceso Envasado'
     };
     const selectedNames = (r.schemes||[]).map(s=>schemeNameMap[s]||s).filter(Boolean);
-    selectedNames.forEach((name,i)=>{
-      sf('bold',selectedNames.length>3?6.5:7.5,DGREY);
-      doc.text(name, ML+NW/2+3, y+9.5+i*(selectedNames.length>3?3.4:3.8));
-    });
+    {
+      const bw=NW/2-5, availH=H-9;
+      let fs=7, lh=3;
+      const wrap=()=>{sf('bold',fs,DGREY);return selectedNames.map(n=>doc.splitTextToSize(n,bw));};
+      let blocks=wrap();
+      while(blocks.reduce((a,l)=>a+l.length,0)*lh>availH && fs>4.6){fs-=0.4;lh=fs*0.42;blocks=wrap();}
+      let yy=y+9;
+      blocks.forEach(ls=>{ls.forEach(l=>{doc.text(l,ML+NW/2+2.5,yy);yy+=lh;});yy+=0.4;});
+    }
 
     ln(ML+NW/2,y+6,ML+NW/2,y+H,[180,195,210],.2);
     ln(ML+NW,y,ML+NW,y+H,INK,.4);
@@ -2161,24 +2166,21 @@ function generarPDF(rec){
   }
 
   function drawSigs(y,r){
-    const h1=6,h2=14,w1=CW*.65,w2=CW*.35;
-    // Fila 1 — Analista de Calidad + Firma
-    fr(ML,y,w1,h1,INK);fr(ML+w1,y,w2,h1,INK);
-    sf('bold',5.5,WHITE);
-    doc.text('NOMBRE ANALISTA DE CALIDAD',ML+w1/2,y+4,{align:'center'});
-    doc.text('FIRMA',ML+w1+w2/2,y+4,{align:'center'});
-    fr(ML,y+h1,CW,h2,WHITE);dr(ML,y,CW,h1+h2,INK,.4);
-    // Firma digital si existe (solo en col derecha)
-    if(r.firma){try{doc.addImage(r.firma,'PNG',ML+w1+2,y+h1+1,w2-4,h2-2);}catch(e){}}
-    y+=h1+h2+3;
-    // Fila 2 — Verificador + Fecha y Firma — VACÍOS (para firma física)
-    fr(ML,y,w1,h1,INK);fr(ML+w1,y,w2,h1,INK);
-    sf('bold',5.5,WHITE);
-    doc.text('NOMBRE VERIFICADOR',ML+w1/2,y+4,{align:'center'});
-    doc.text('FECHA Y FIRMA',ML+w1+w2/2,y+4,{align:'center'});
-    fr(ML,y+h1,CW,h2,WHITE);dr(ML,y,CW,h1+h2,INK,.4);
-    // Cuadros vacíos para completar a mano
-    return y+h1+h2+3;
+    const h1=6,h2=12,w1=CW*.65,w2=CW*.35;
+    [['NOMBRE DE JEFE DE LINEA O SUPERVISOR','FIRMA',r.supervisor||'',r.firma||''],
+     ['NOMBRE DE MANTENCIÓN','FIRMA','',''],
+     ['NOMBRE DE VERIFICADOR','FIRMA Y FECHA','','']].forEach(([l1,l2,nombre,firma])=>{
+      fr(ML,y,w1,h1,INK);fr(ML+w1,y,w2,h1,INK);
+      sf('bold',5.5,WHITE);
+      doc.text(l1,ML+w1/2,y+4,{align:'center'});
+      doc.text(l2,ML+w1+w2/2,y+4,{align:'center'});
+      fr(ML,y+h1,CW,h2,WHITE);dr(ML,y,CW,h1+h2,INK,.4);
+      ln(ML+w1,y,ML+w1,y+h1+h2,INK,.3);
+      if(nombre){sf('normal',8,DGREY);doc.text(nombre,ML+4,y+h1+h2/2+1.5);}
+      if(firma){try{doc.addImage(firma,'PNG',ML+w1+2,y+h1+1,w2-4,h2-2);}catch(e){}}
+      y+=h1+h2+3;
+    });
+    return y;
   }
 
   // Build entries
@@ -2236,7 +2238,7 @@ function generarPDF(rec){
     const lines=[];ps.forEach(t=>doc.splitTextToSize((bul?'• ':'')+t,nw2-6).forEach(l=>lines.push(l)));
     return {nc,lines,h:Math.max(11,lines.length*2.7+4)};
   });
-  const BBH=instrH+3+5.5+ncLayout.reduce((a,r)=>a+r.h,0)+(rec.accionInmediata?20:0)+(rec.obs?18:0)+50;
+  const BBH=instrH+3+5.5+ncLayout.reduce((a,r)=>a+r.h,0)+(rec.accionInmediata?20:0)+(rec.obs?18:0)+78;
   if(y+BBH>PH-8) newPage(false);
   y+=4;
   instrLines.forEach(ls=>{sf('normal',5.5,DGREY);doc.text(ls,ML+3,y);y+=ls.length*2.6+1});
